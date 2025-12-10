@@ -1,185 +1,137 @@
+{{-- ================================================================ --}}
+{{-- resources/views/uji-fungsi/index.blade.php --}}
+{{-- ================================================================ --}}
 @extends('layouts.app')
-
 @section('title', 'Uji Fungsi')
 @section('page-title', 'Uji Fungsi')
-
 @section('content')
 <div class="container-fluid">
-    <!-- Tab Navigation -->
-    <ul class="nav nav-tabs mb-3" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="monitoring-tab" data-bs-toggle="tab" data-bs-target="#monitoring" type="button">
-                <i class="bi bi-bar-chart"></i> Monitoring Uji Fungsi
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#monitoring">
+                <i class="bi bi-bar-chart"></i> Monitoring
             </button>
         </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="scanning-tab" data-bs-toggle="tab" data-bs-target="#scanning" type="button">
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#scanning">
                 <i class="bi bi-upc-scan"></i> Actual Scanning
             </button>
         </li>
     </ul>
 
-    <!-- Tab Content -->
     <div class="tab-content">
-        <!-- Tab 1: Monitoring -->
-        <div class="tab-pane fade show active" id="monitoring" role="tabpanel">
+        {{-- TAB 1: MONITORING --}}
+        <div class="tab-pane fade show active" id="monitoring">
             <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Ringkasan Uji Fungsi</h5>
-                </div>
+                <div class="card-header"><h5 class="mb-0"><i class="bi bi-bar-chart"></i> Ringkasan Uji Fungsi</h5></div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover text-center">
+                    @foreach(['Linknet', 'Telkomsel'] as $pemilik)
+                    <h6 class="text-muted mb-3">{{ $pemilik }}</h6>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered text-center">
                             <thead class="table-dark">
-                                <tr>
-                                    <th>Kategori</th>
-                                    <th class="text-light">FUNGSI OK</th>
-                                    <th class="text-light">FUNGSI NOK</th>
-                                    <th>Total</th>
-                                </tr>
+                                <tr><th>Jenis</th><th class="bg-success">OK</th><th class="bg-danger">NOK</th><th>Total</th></tr>
                             </thead>
                             <tbody>
-                                @foreach(['ONT', 'STB', 'ROUTER'] as $category)
+                                @foreach(['STB', 'ONT', 'ROUTER'] as $jenis)
                                 <tr>
-                                    <td><strong>{{ $category }}</strong></td>
-                                    <td class="bg-success bg-opacity-10">
-                                        <h4 class="mb-0 text-success">{{ $monitoring[$category]['ok'] ?? 0 }}</h4>
-                                    </td>
-                                    <td class="bg-danger bg-opacity-10">
-                                        <h4 class="mb-0 text-danger">{{ $monitoring[$category]['nok'] ?? 0 }}</h4>
-                                    </td>
-                                    <td class="bg-light">
-                                        <h5 class="mb-0">{{ $monitoring[$category]['total'] ?? 0 }}</h5>
-                                    </td>
+                                    <td><strong>{{ $jenis }}</strong></td>
+                                    <td class="bg-success bg-opacity-10"><h5 class="text-success mb-0">{{ $monitoring[$pemilik][$jenis]['ok'] }}</h5></td>
+                                    <td class="bg-danger bg-opacity-10"><h5 class="text-danger mb-0">{{ $monitoring[$pemilik][$jenis]['nok'] }}</h5></td>
+                                    <td class="bg-light"><h6 class="mb-0">{{ $monitoring[$pemilik][$jenis]['total'] }}</h6></td>
                                 </tr>
                                 @endforeach
                                 <tr class="table-secondary">
                                     <td><strong>TOTAL</strong></td>
-                                    <td>
-                                        <h3 class="mb-0 text-success">{{ $monitoring['TOTAL']['ok'] ?? 0 }}</h3>
-                                    </td>
-                                    <td>
-                                        <h3 class="mb-0 text-danger">{{ $monitoring['TOTAL']['nok'] ?? 0 }}</h3>
-                                    </td>
-                                    <td>
-                                        <h3 class="mb-0">{{ $monitoring['TOTAL']['total'] ?? 0 }}</h3>
-                                    </td>
+                                    <td><h5 class="text-success mb-0">{{ $monitoring[$pemilik]['TOTAL']['ok'] }}</h5></td>
+                                    <td><h5 class="text-danger mb-0">{{ $monitoring[$pemilik]['TOTAL']['nok'] }}</h5></td>
+                                    <td><h5 class="mb-0">{{ $monitoring[$pemilik]['TOTAL']['total'] }}</h5></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
+                    @endforeach
                 </div>
             </div>
         </div>
 
-        <!-- Tab 2: Actual Scanning -->
-        <div class="tab-pane fade" id="scanning" role="tabpanel">
+        {{-- TAB 2: SCANNING --}}
+        <div class="tab-pane fade" id="scanning">
             <div class="row">
-                <!-- Scanning Form -->
                 <div class="col-md-4">
                     <div class="card">
                         <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0"><i class="bi bi-upc-scan"></i> Form Scanning</h5>
+                            <h6 class="mb-0"><i class="bi bi-upc-scan"></i> Form Uji Fungsi</h6>
                         </div>
                         <div class="card-body">
-                            <form id="scanningForm">
-                                <!-- Status Selection -->
+                            <form id="ujiFungsiForm">
                                 <div class="mb-3">
-                                    <label class="form-label">Pilih Status Hasil Uji <span class="text-danger">*</span></label>
+                                    <label class="form-label">System Test Result</label>
                                     <div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="status" id="statusOK" value="OK" required checked>
-                                            <label class="form-check-label" for="statusOK">
+                                            <input class="form-check-input" type="radio" name="result" value="OK" id="resultOK" checked>
+                                            <label class="form-check-label" for="resultOK">
                                                 <span class="badge bg-success">OK</span>
                                             </label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="radio" name="status" id="statusNOK" value="NOK" required>
-                                            <label class="form-check-label" for="statusNOK">
+                                            <input class="form-check-input" type="radio" name="result" value="NOK" id="resultNOK">
+                                            <label class="form-check-label" for="resultNOK">
                                                 <span class="badge bg-danger">NOK</span>
                                             </label>
                                         </div>
                                     </div>
                                 </div>
-
-                                <!-- Serial Number Input -->
                                 <div class="mb-3">
-                                    <label class="form-label">Scan Barcode / Serial Number <span class="text-danger">*</span></label>
-                                    <input type="text" id="serialNumber" class="form-control" placeholder="Scan atau ketik Serial Number" required autofocus>
+                                    <label class="form-label">Scan Barcode</label>
+                                    <input type="text" id="serialNumberUji" class="form-control form-control-lg" 
+                                           placeholder="Scan Serial Number" autofocus autocomplete="off">
                                     <small class="text-muted">Tekan Enter setelah scan</small>
                                 </div>
-
-                                <!-- Auto-fill Fields -->
-                                <div id="autoFillSection" style="display: none;">
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Nama Barang</label>
-                                        <input type="text" id="namaBarang" class="form-control" readonly>
+                                <div id="autoFillUji" style="display: none;">
+                                    <input type="hidden" id="igiDetailIdUji">
+                                    <div class="alert alert-info">
+                                        <div><strong>Jenis:</strong> <span id="jenisUji"></span></div>
+                                        <div><strong>Merk:</strong> <span id="merkUji"></span></div>
+                                        <div><strong>Type:</strong> <span id="typeUji"></span></div>
                                     </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Type</label>
-                                        <input type="text" id="type" class="form-control" readonly>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Waktu Uji</label>
-                                        <input type="text" id="waktuUji" class="form-control" readonly>
-                                    </div>
-
-                                    <button type="submit" class="btn btn-primary w-100">
-                                        <i class="bi bi-save"></i> Simpan Hasil Uji
-                                    </button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 </div>
-
-                <!-- Results Table -->
                 <div class="col-md-8">
                     <div class="card">
                         <div class="card-header">
-                            <h5 class="mb-0"><i class="bi bi-table"></i> Hasil Scanning</h5>
+                            <h6 class="mb-0"><i class="bi bi-table"></i> Hasil Scanning</h6>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-striped table-hover" id="resultsTable">
+                                <table class="table table-striped table-hover">
                                     <thead class="table-dark">
-                                        <tr>
-                                            <th>Waktu Uji Fungsi</th>
-                                            <th>Serial Number</th>
-                                            <th>Nama Barang</th>
-                                            <th>Type/Merk</th>
-                                            <th>Hasil</th>
-                                            <th>Aksi</th>
-                                        </tr>
+                                        <tr><th>Uji Time</th><th>Serial Number</th><th>Jenis</th><th>Result</th><th>User</th><th>Aksi</th></tr>
                                     </thead>
-                                    <tbody id="resultsBody">
-                                        @foreach($recentUjiFungsi as $scan)
-                                        <tr id="row-{{ $scan->id }}">
-                                            <td>{{ $scan->waktu_uji->format('d-m-Y H:i:s') }}</td>
-                                            <td><code>{{ $scan->igi->serial_number }}</code></td>
-                                            <td>{{ $scan->igi->nama_barang }}</td>
-                                            <td>{{ $scan->igi->type }}</td>
+                                    <tbody id="ujiFungsiTableBody">
+                                        @foreach($recentTests as $test)
+                                        <tr id="uji-row-{{ $test->id }}">
+                                            <td>{{ $test->uji_fungsi_time->format('d-m-Y H:i:s') }}</td>
+                                            <td><code>{{ $test->igiDetail->serial_number }}</code></td>
+                                            <td>{{ $test->igiDetail->jenis }}</td>
+                                            <td><span class="badge badge-{{ $test->result === 'OK' ? 'ok' : 'nok' }}">{{ $test->result }}</span></td>
+                                            <td>{{ $test->user->name }}</td>
                                             <td>
-                                                <span class="badge badge-{{ $scan->status == 'OK' ? 'ok' : 'nok' }}">
-                                                    {{ $scan->status }}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button class="btn btn-sm btn-danger btn-delete-uji" data-id="{{ $scan->id }}">
+                                                @if(auth()->user()->canDeleteActivity($test->user_id))
+                                                <button class="btn btn-sm btn-danger btn-delete-uji" data-id="{{ $test->id }}">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
+                                                @endif
                                             </td>
                                         </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="d-flex justify-content-center mt-3">
-                                {{ $recentUjiFungsi->links('pagination::bootstrap-5') }}
-                            </div>
+                            {{ $recentTests->links('pagination::bootstrap-5') }}
                         </div>
                     </div>
                 </div>
@@ -187,151 +139,94 @@
         </div>
     </div>
 </div>
-@endsection
 
 @push('scripts')
 <script>
-    $(document).ready(function() {
-        let igiId = null; // Simpan igi_id di sini
-
-        // Update waktu real-time
-        function updateTime() {
-            const now = new Date();
-            const formatted = now.toLocaleDateString('id-ID', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            }).replace(/\//g, '-');
-            $('#waktuUji').val(formatted);
-        }
-
-        // Check serial number on Enter key
-        $('#serialNumber').on('keypress', function(e) {
-            if (e.which === 13) {
-                e.preventDefault();
-                checkSerialNumber();
-            }
-        });
-
-        function checkSerialNumber() {
-            const serialNumber = $('#serialNumber').val().trim();
-
-            if (!serialNumber) {
-                alert('Serial Number tidak boleh kosong!');
-                return;
-            }
-
-            // Check if status is selected
-            const status = $('input[name="status"]:checked').val();
-            if (!status) {
-                alert('Pilih status hasil uji terlebih dahulu!');
-                return;
-            }
-
-            $.ajax({
-                url: '{{ route("uji-fungsi.check-serial") }}',
-                method: 'POST',
-                data: {
-                    serial_number: serialNumber
-                },
-                success: function(response) {
-                    if (response.success) {
-                        igiId = response.data.igi_id; // Simpan igi_id dari response
-                        $('#namaBarang').val(response.data.nama_barang);
-                        $('#type').val(response.data.type);
-                        updateTime();
-                        setInterval(updateTime, 1000);
-                        $('#autoFillSection').slideDown();
-                    }
-                },
-                error: function(xhr) {
-                    const response = xhr.responseJSON;
-                    alert(response.message || 'Serial Number tidak ditemukan!');
-                    $('#serialNumber').val('').focus();
-                    $('#autoFillSection').slideUp();
-                    igiId = null; // Reset igi_id
-                }
-            });
-        }
-
-        // Submit form
-        $('#scanningForm').on('submit', function(e) {
+$(document).ready(function() {
+    let igiDetailId = null;
+    
+    $('#serialNumberUji').on('keypress', function(e) {
+        if (e.which === 13) {
             e.preventDefault();
-
-            const formData = {
-                igi_id: igiId, // Kirim igi_id ke controller
-                status: $('input[name="status"]:checked').val()
-            };
-
-            $.ajax({
-                url: '{{ route("uji-fungsi.store") }}',
-                method: 'POST',
-                data: formData,
-                success: function(response) {
-                    if (response.success) {
-                        // Add to table
-                        const data = response.data.igi;
-                        const badgeClass = response.data.status === 'OK' ? 'badge-ok' : 'badge-nok';
-                        const newRow = `
-                        <tr id="row-${response.data.id}">
-                            <td>${new Date(response.data.waktu_uji).toLocaleString('id-ID')}</td>
-                            <td><code>${data.serial_number}</code></td>
-                            <td>${data.nama_barang}</td>
-                            <td>${data.type}</td>
-                            <td><span class="badge ${badgeClass}">${response.data.status}</span></td>
-                            <td>
-                                <button class="btn btn-sm btn-danger btn-delete-uji" data-id="${response.data.id}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                        $('#resultsBody').prepend(newRow);
-
-                        // Reset form
-                        $('#scanningForm')[0].reset();
-                        $('#autoFillSection').slideUp();
-                        $('#serialNumber').focus();
-                        igiId = null; // Reset igi_id
-
-                        // Show success message
-                        alert(response.message);
-                    }
-                },
-                error: function(xhr) {
-                    const response = xhr.responseJSON;
-                    alert(response.message || 'Terjadi kesalahan saat menyimpan data!');
-                }
-            });
-        });
-
-        // Delete record with event delegation
-        $(document).on('click', '.btn-delete-uji', function() {
-            const id = $(this).data('id');
-
-            if (!confirm('Yakin ingin menghapus data ini?')) {
-                return;
+            checkSerial();
+        }
+    });
+    
+    function checkSerial() {
+        const serialNumber = $('#serialNumberUji').val().trim();
+        const result = $('input[name="result"]:checked').val();
+        
+        if (!serialNumber) return;
+        
+        $.ajax({
+            url: '{{ route("uji-fungsi.check-serial") }}',
+            method: 'POST',
+            data: { serial_number: serialNumber, result: result },
+            success: function(response) {
+                igiDetailId = response.data.id;
+                $('#igiDetailIdUji').val(igiDetailId);
+                $('#jenisUji').text(response.data.jenis);
+                $('#merkUji').text(response.data.merk);
+                $('#typeUji').text(response.data.type);
+                $('#autoFillUji').slideDown();
+                submitUjiFungsi();
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Error!');
+                $('#serialNumberUji').val('').focus();
+                $('#autoFillUji').hide();
             }
-
-            $.ajax({
-                url: `/uji-fungsi/${id}`,
-                method: 'DELETE',
-                success: function(response) {
-                    if (response.success) {
-                        $(`#row-${id}`).fadeOut(300, function() {
-                            $(this).remove();
-                        });
-                        alert(response.message);
-                    }
-                },
-                error: function(xhr) {
-                    alert('Gagal menghapus data!');
-                }
-            });
+        });
+    }
+    
+    function submitUjiFungsi() {
+        const result = $('input[name="result"]:checked').val();
+        
+        $.ajax({
+            url: '{{ route("uji-fungsi.store") }}',
+            method: 'POST',
+            data: { igi_detail_id: igiDetailId, result: result },
+            success: function(response) {
+                const data = response.data;
+                const badge = data.result === 'OK' ? 'badge-ok' : 'badge-nok';
+                const row = `
+                    <tr id="uji-row-${data.id}">
+                        <td>${new Date(data.uji_fungsi_time).toLocaleString('id-ID')}</td>
+                        <td><code>${data.igiDetail.serial_number}</code></td>
+                        <td>${data.igiDetail.jenis}</td>
+                        <td><span class="badge ${badge}">${data.result}</span></td>
+                        <td>${data.user.name}</td>
+                        <td>
+                            <button class="btn btn-sm btn-danger btn-delete-uji" data-id="${data.id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                $('#ujiFungsiTableBody').prepend(row);
+                $('#serialNumberUji').val('').focus();
+                $('#autoFillUji').hide();
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Error!');
+            }
+        });
+    }
+    
+    $(document).on('click', '.btn-delete-uji', function() {
+        const id = $(this).data('id');
+        if (!confirm('Yakin hapus?')) return;
+        
+        $.ajax({
+            url: `/uji-fungsi/${id}`,
+            method: 'DELETE',
+            success: function(response) {
+                $(`#uji-row-${id}`).fadeOut(300, function() { $(this).remove(); });
+                alert(response.message);
+            }
         });
     });
+});
 </script>
 @endpush
+@endsection

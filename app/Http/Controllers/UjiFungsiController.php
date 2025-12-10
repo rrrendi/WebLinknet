@@ -1,193 +1,222 @@
 <?php
+// app/Http/Controllers/UjiFungsiController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\UjiFungsi;
-use App\Models\Igi;
+use App\Models\IgiDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class UjiFungsiController extends Controller
 {
+    // TAB 1: Monitoring
     public function index()
     {
-        // Get monitoring data
         $monitoring = $this->getMonitoringData();
-        
-        // Get recent scans
-        $recentUjiFungsi = UjiFungsi::with('igi')
-            ->orderBy('waktu_uji', 'desc')
-            ->paginate(10);
-        
-        return view('uji-fungsi.index', compact('monitoring', 'recentUjiFungsi'));
+
+        // Recent tests untuk TAB 2
+        $recentTests = UjiFungsi::with(['igiDetail.bapb', 'user'])
+            ->orderBy('uji_fungsi_time', 'desc')
+            ->paginate(20);
+
+        return view('uji-fungsi.index', compact('monitoring', 'recentTests'));
     }
 
-    public function getMonitoring()
-    {
-        $monitoring = $this->getMonitoringData();
-        return response()->json($monitoring);
-    }
-
+    // Get Monitoring Data
     private function getMonitoringData()
     {
-        $categories = ['ONT', 'STB', 'ROUTER'];
         $monitoring = [];
+        $pemilikList = ['Linknet', 'Telkomsel'];
+        $jenisList = ['STB', 'ONT', 'ROUTER'];
 
-        foreach ($categories as $category) {
-            $ok = UjiFungsi::whereHas('igi', function($query) use ($category) {
-                $query->where('nama_barang', $category);
-            })->where('status', 'OK')->count();
-            
-            $nok = UjiFungsi::whereHas('igi', function($query) use ($category) {
-                $query->where('nama_barang', $category);
-            })->where('status', 'NOK')->count();
-            
-            $monitoring[$category] = [
-                'ok' => $ok,
-                'nok' => $nok,
-                'total' => $ok + $nok
-            ];
+        foreach ($pemilikList as $pemilik) {
+            foreach ($jenisList as $jenis) {
+                $ok = UjiFungsi::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
+                    $q->whereHas('bapb', function ($q2) use ($pemilik) {
+                        $q2->where('pemilik', $pemilik);
+                    })->where('jenis', $jenis);
+                })->where('result', 'OK')->count();
+
+                $nok = UjiFungsi::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
+                    $q->whereHas('bapb', function ($q2) use ($pemilik) {
+                        $q2->where('pemilik', $pemilik);
+                    })->where('jenis', $jenis);
+                })->where('result', 'NOK')->count();
+
+                $monitoring[$pemilik][$jenis] = [
+                    'ok' => $ok,
+                    'nok' => $nok,
+                    'total' => $ok + $nok
+                ];
+            }
         }
 
-        // Total
-        $totalOk = array_sum(array_column($monitoring, 'ok'));
-        $totalNok = array_sum(array_column($monitoring, 'nok'));
-        
-        $monitoring['TOTAL'] = [
-            'ok' => $totalOk,
-            'nok' => $totalNok,
-            'total' => $totalOk + $totalNok
-        ];
+        // Total per pemilik
+        foreach ($pemilikList as $pemilik) {
+            $totalOk = array_sum(array_column($monitoring[$pemilik], 'ok'));
+            $totalNok = array_sum(array_column($monitoring[$pemilik], 'nok'));
+            $monitoring[$pemilik]['TOTAL'] = [
+                'ok' => $totalOk,
+                'nok' => $totalNok,
+                'total' => $totalOk + $totalNok
+            ];
+        }
 
         return $monitoring;
     }
 
+    // Check Serial Number
     public function checkSerial(Request $request)
     {
         $request->validate([
-            'serial_number' => 'required'
+            'serial_number' => 'required',
+            'result' => 'required|in:OK,NOK'
         ]);
 
-        $igi = Igi::where('serial_number', $request->serial_number)->first();
+        $detail = IgiDetail::where('serial_number', $request->serial_number)->first();
 
-        if (!$igi) {
+        if (!$detail) {
             return response()->json([
                 'success' => false,
-                'message' => 'Serial Number tidak ditemukan dalam database IGI'
+                'message' => 'Serial Number tidak ditemukan di database IGI!'
             ], 404);
         }
 
-        // VALIDASI: Tidak boleh uji fungsi 2x
-        if ($igi->ujiFungsi()->exists()) {
+        // Validasi: status harus masih IGI
+        if ($detail->status_proses !== 'IGI') {
             return response()->json([
                 'success' => false,
-                'message' => 'Serial Number sudah pernah di Uji Fungsi.'
+                'message' => 'Barang sudah masuk proses: ' . $detail->status_proses
+            ], 400);
+        }
+
+        // Validasi: belum pernah di uji fungsi
+        if ($detail->ujiFungsi()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Serial Number sudah pernah di Uji Fungsi!'
             ], 400);
         }
 
         return response()->json([
             'success' => true,
             'data' => [
-                'igi_id' => $igi->id,
-                'nama_barang' => $igi->nama_barang,
-                'type' => $igi->type,
-                'serial_number' => $igi->serial_number
+                'id' => $detail->id,
+                'jenis' => $detail->jenis,
+                'merk' => $detail->merk,
+                'type' => $detail->type,
+                'serial_number' => $detail->serial_number
             ]
         ]);
     }
 
+    // Store Uji Fungsi Result
     public function store(Request $request)
     {
         $request->validate([
-            'igi_id' => 'required|exists:igi,id',
-            'status' => 'required|in:OK,NOK',
-            'keterangan' => 'nullable|string'
-        ], [
-            'igi_id.required' => 'IGI ID wajib diisi',
-            'igi_id.exists' => 'IGI ID tidak ditemukan',
-            'status.required' => 'Status wajib dipilih',
-            'status.in' => 'Status harus OK atau NOK'
+            'igi_detail_id' => 'required|exists:igi_details,id',
+            'result' => 'required|in:OK,NOK'
         ]);
 
         DB::beginTransaction();
         try {
-            $igi = Igi::findOrFail($request->igi_id);
-            
-            // VALIDASI LAGI: Tidak boleh uji fungsi 2x
-            if ($igi->ujiFungsi()->exists()) {
+            $detail = IgiDetail::findOrFail($request->igi_detail_id);
+
+            // Validasi lagi
+            if ($detail->ujiFungsi()->exists()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Serial Number sudah pernah di Uji Fungsi.'
+                    'message' => 'Serial Number sudah pernah di Uji Fungsi!'
                 ], 400);
             }
 
-            // Insert Uji Fungsi
+            // Create Uji Fungsi record
             $ujiFungsi = UjiFungsi::create([
-                'igi_id' => $igi->id,
-                'status' => $request->status,
-                'keterangan' => $request->keterangan,
-                'waktu_uji' => Carbon::now()
+                'igi_detail_id' => $detail->id,
+                'result' => $request->result,
+                'uji_fungsi_time' => Carbon::now(),
+                'user_id' => Auth::id()
             ]);
 
-            // Update status di IGI Operasional
-            $igi->update(['status_proses' => 'UJI_FUNGSI']);
+            // Update status proses
+            $detail->updateStatusProses('UJI_FUNGSI');
 
-            // Update status di IGI Master
-            $igi->master->update(['status_proses' => 'UJI_FUNGSI']);
+            // Log activity
+            $detail->logActivity('UJI_FUNGSI', $request->result, Auth::id());
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data Uji Fungsi berhasil disimpan',
-                'data' => $ujiFungsi->load('igi')
+                'message' => 'Uji Fungsi berhasil disimpan!',
+                'data' => $ujiFungsi->load(['igiDetail.bapb', 'user'])
             ]);
-            
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
 
+    // Delete Uji Fungsi (hanya jika tidak ada proses lanjutan)
     public function destroy($id)
     {
         DB::beginTransaction();
         try {
-            $ujiFungsi = UjiFungsi::with('igi.master')->findOrFail($id);
-            $igi = $ujiFungsi->igi;
-            
-            // PROTEKSI: Cek apakah ada proses selanjutnya
-            // Jika ada repair atau rekondisi, jangan boleh dihapus
-            if ($igi->repair()->exists() || $igi->rekondisi()->exists() || $igi->serviceHandling()->exists()) {
+            $ujiFungsi = UjiFungsi::with('igiDetail')->findOrFail($id);
+            $detail = $ujiFungsi->igiDetail;
+
+            // Check permission: hanya user yang membuat bisa hapus
+            $currentUser = Auth::user();
+
+            // Cek: Admin bisa hapus semua, user biasa hanya milik sendiri
+            $isAdmin = ($currentUser->role === 'admin');
+            $isOwner = ($ujiFungsi->user_id == $currentUser->id);
+
+            if (!$isAdmin && !$isOwner) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Data Uji Fungsi tidak bisa dihapus karena sudah melanjut ke proses berikutnya (Repair/Rekondisi/Service Handling). Hapus dari proses paling akhir terlebih dahulu!'
+                    'message' => 'Anda tidak memiliki akses untuk menghapus data ini.'
                 ], 403);
             }
-            
-            // ROLLBACK LOGIC: Hapus Uji Fungsi → Kembali ke IGI
-            $igi->update(['status_proses' => 'IGI']);
-            $igi->master->update(['status_proses' => 'IGI']);
-            
-            // Delete record uji fungsi
+
+            // Check jika ada proses lanjutan
+            if (
+                $detail->repair()->exists() ||
+                $detail->rekondisi()->exists() ||
+                $detail->serviceHandling()->exists()
+            ) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak bisa hapus. Sudah ada proses lanjutan!'
+                ], 403);
+            }
+
+            // Hapus uji fungsi
             $ujiFungsi->delete();
-            
+
+            // Kembalikan status ke IGI
+            $detail->updateStatusProses('IGI');
+
+            // Hapus activity log
+            $detail->activityLogs()->where('aktivitas', 'UJI_FUNGSI')->delete();
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
-                'message' => 'Data uji fungsi berhasil dihapus. Status barang dikembalikan ke IGI.'
+                'message' => 'Data Uji Fungsi berhasil dihapus!'
             ]);
-            
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }

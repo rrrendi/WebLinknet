@@ -1,132 +1,91 @@
 <?php
-
+// app/Http/Controllers/RekondisiController.php
 namespace App\Http\Controllers;
 
-use App\Models\Rekondisi;
-use App\Models\Repair;
-use App\Models\UjiFungsi;
-use App\Models\Igi;
+use App\Models\{Rekondisi, IgiDetail};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class RekondisiController extends Controller
 {
     public function index()
     {
-        $monitoring = $this->getMonitoringData();
-        $recentRekondisi = Rekondisi::with('igi')->orderBy('waktu_rekondisi', 'desc')->paginate(10);
-        
-        return view('rekondisi.index', compact('monitoring', 'recentRekondisi'));
+        $monitoring = $this->getMonitoring();
+        $recentRekondisi  = Rekondisi::with(['igiDetail.bapb', 'user'])
+            ->orderBy('rekondisi_time', 'desc')
+            ->paginate(20);
+        return view('rekondisi.index', compact('monitoring', 'recentRekondisi '));
     }
 
-    public function getMonitoring()
+    private function getMonitoring()
     {
-        $monitoring = $this->getMonitoringData();
-        return response()->json($monitoring);
-    }
-
-    private function getMonitoringData()
-    {
-        $categories = ['ONT', 'STB', 'ROUTER'];
-        $monitoring = [];
-
-        foreach ($categories as $category) {
-            $count = Rekondisi::whereHas('igi', function($query) use ($category) {
-                $query->where('nama_barang', $category);
-            })->count();
-            
-            $monitoring[$category] = $count;
+        $data = [];
+        foreach (['Linknet', 'Telkomsel'] as $pemilik) {
+            foreach (['STB', 'ONT', 'ROUTER'] as $jenis) {
+                $count = Rekondisi::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
+                    $q->whereHas('bapb', fn($q2) => $q2->where('pemilik', $pemilik))
+                        ->where('jenis', $jenis);
+                })->count();
+                $data[$pemilik][$jenis] = $count;
+            }
+            $data[$pemilik]['TOTAL'] = array_sum($data[$pemilik]);
         }
-
-        $monitoring['TOTAL'] = array_sum($monitoring);
-        return $monitoring;
+        return $data;
     }
 
     public function checkSerial(Request $request)
     {
-        $serialNumber = $request->serial_number;
-        
-        $igi = Igi::where('serial_number', $serialNumber)->first();
-        
-        if (!$igi) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Serial Number tidak ditemukan dalam database IGI'
-            ], 404);
+        $detail = IgiDetail::where('serial_number', $request->serial_number)->first();
+        if (!$detail) {
+            return response()->json(['success' => false, 'message' => 'Serial Number tidak ditemukan!'], 404);
         }
 
-        // VALIDASI: Harus ada uji_fungsi OK ATAU repair OK
-        $ujiFungsiOk = $igi->ujiFungsi()->where('status', 'OK')->exists();
-        $repairOk = $igi->repair()->where('status', 'OK')->exists();
+        // Harus dari Uji Fungsi OK atau Repair OK
+        $hasOkResult = $detail->ujiFungsi()->where('result', 'OK')->exists() ||
+            $detail->repair()->where('result', 'OK')->exists();
 
-        if (!$ujiFungsiOk && !$repairOk) {
+        if (!$hasOkResult) {
             return response()->json([
                 'success' => false,
-                'message' => 'Rekondisi hanya untuk barang dengan status OK dari Uji Fungsi atau Repair.'
+                'message' => 'Rekondisi hanya untuk barang dengan result OK!'
             ], 400);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'igi_id' => $igi->id,
-                'nama_barang' => $igi->nama_barang,
-                'type' => $igi->type,
-                'serial_number' => $igi->serial_number
-            ]
-        ]);
+        return response()->json(['success' => true, 'data' => [
+            'id' => $detail->id,
+            'jenis' => $detail->jenis,
+            'merk' => $detail->merk,
+            'type' => $detail->type,
+            'serial_number' => $detail->serial_number
+        ]]);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'igi_id' => 'required|exists:igi,id',
-            'tindakan' => 'nullable|string'
-        ]);
-
         DB::beginTransaction();
         try {
-            $igi = Igi::findOrFail($request->igi_id);
-            
-            // VALIDASI: Harus ada uji_fungsi OK ATAU repair OK
-            $ujiFungsiOk = $igi->ujiFungsi()->where('status', 'OK')->exists();
-            $repairOk = $igi->repair()->where('status', 'OK')->exists();
+            $detail = IgiDetail::findOrFail($request->igi_detail_id);
 
-            if (!$ujiFungsiOk && !$repairOk) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Rekondisi hanya untuk barang dengan status OK'
-                ], 400);
-            }
-
-            // Insert Rekondisi
             $rekondisi = Rekondisi::create([
-                'igi_id' => $igi->id,
-                'tindakan' => $request->tindakan,
-                'waktu_rekondisi' => Carbon::now()
+                'igi_detail_id' => $detail->id,
+                'rekondisi_time' => Carbon::now(),
+                'user_id' => Auth::id()
             ]);
 
-            // Update status di IGI Operasional
-            $igi->update(['status_proses' => 'REKONDISI']);
-
-            // Update status di IGI Master
-            $igi->master->update(['status_proses' => 'REKONDISI']);
+            $detail->updateStatusProses('REKONDISI');
+            $detail->logActivity('REKONDISI', 'N/A', Auth::id());
 
             DB::commit();
-
             return response()->json([
                 'success' => true,
-                'message' => 'Data Rekondisi berhasil disimpan',
-                'data' => $rekondisi->load('igi')
+                'message' => 'Rekondisi berhasil!',
+                'data' => $rekondisi->load(['igiDetail.bapb', 'user'])
             ]);
-            
         } catch (\Exception $e) {
             DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -134,50 +93,37 @@ class RekondisiController extends Controller
     {
         DB::beginTransaction();
         try {
-            $rekondisi = Rekondisi::with('igi.master', 'igi.repair', 'igi.ujiFungsi')->findOrFail($id);
-            $igi = $rekondisi->igi;
-            
-            // PROTEKSI: Cek apakah ada proses selanjutnya
-            // Jika ada packing, jangan boleh dihapus
-            if ($igi->packing()->exists()) {
+            $rekondisi = Rekondisi::with('igiDetail')->findOrFail($id);
+
+            $currentUser = Auth::user();
+
+            // Cek: Admin bisa hapus semua, user biasa hanya milik sendiri
+            $isAdmin = ($currentUser->role === 'admin');
+            $isOwner = ($rekondisi->user_id == $currentUser->id);
+
+            if (!$isAdmin && !$isOwner) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Data Rekondisi tidak bisa dihapus karena sudah melanjut ke proses Packing. Hapus dari Packing terlebih dahulu!'
+                    'message' => 'Anda tidak memiliki akses untuk menghapus data ini.'
                 ], 403);
             }
-            
-            // ROLLBACK LOGIC: Cek sumber terakhir
-            // Jika ada repair OK → kembali ke REPAIR
-            // Jika hanya uji fungsi OK → kembali ke UJI_FUNGSI
-            
-            $lastRepairOk = $igi->repair()->where('status', 'OK')->latest()->first();
-            
-            if ($lastRepairOk) {
-                // Kembali ke REPAIR
-                $igi->update(['status_proses' => 'REPAIR']);
-                $igi->master->update(['status_proses' => 'REPAIR']);
-            } else {
-                // Kembali ke UJI_FUNGSI
-                $igi->update(['status_proses' => 'UJI_FUNGSI']);
-                $igi->master->update(['status_proses' => 'UJI_FUNGSI']);
+
+            if (
+                $rekondisi->igiDetail->serviceHandling()->exists() ||
+                $rekondisi->igiDetail->packing()->exists()
+            ) {
+                return response()->json(['success' => false, 'message' => 'Ada proses lanjutan!'], 403);
             }
-            
-            // Delete record rekondisi
+
             $rekondisi->delete();
-            
+            $rekondisi->igiDetail->updateStatusProses('REPAIR');
+            $rekondisi->igiDetail->activityLogs()->where('aktivitas', 'REKONDISI')->delete();
+
             DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Data rekondisi berhasil dihapus. Status barang dikembalikan.'
-            ]);
-            
+            return response()->json(['success' => true, 'message' => 'Berhasil dihapus!']);
         } catch (\Exception $e) {
             DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }

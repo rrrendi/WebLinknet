@@ -1,234 +1,254 @@
 <?php
+// app/Http/Controllers/IgiController.php
 
 namespace App\Http\Controllers;
 
-use App\Models\Igi;
-use App\Models\IgiMaster;
+use App\Models\IgiBapb;
+use App\Models\IgiDetail;
+use App\Models\MasterMerk;
+use App\Models\MasterType;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class IgiController extends Controller
 {
+    // STEP 1: List BAPB Header
     public function index(Request $request)
     {
-        $query = Igi::with('master');
-        
-        // Search
-        if ($request->has('search') && $request->search != '') {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('no_do', 'like', "%{$search}%")
-                  ->orWhere('nama_barang', 'like', "%{$search}%")
-                  ->orWhere('type', 'like', "%{$search}%")
-                  ->orWhere('serial_number', 'like', "%{$search}%");
-            });
+        $query = IgiBapb::query();
+
+        // Filter
+        if ($request->filled('pemilik')) {
+            $query->where('pemilik', $request->pemilik);
         }
-        
-        // Filter by date range
-        if ($request->has('start_date') && $request->start_date != '') {
-            $query->whereDate('tanggal_datang', '>=', $request->start_date);
+        if ($request->filled('wilayah')) {
+            $query->where('wilayah', $request->wilayah);
         }
-        if ($request->has('end_date') && $request->end_date != '') {
-            $query->whereDate('tanggal_datang', '<=', $request->end_date);
+        if ($request->filled('tanggal_datang')) {
+            $query->whereDate('tanggal_datang', $request->tanggal_datang);
         }
-        
-        // Filter by nama_barang
-        if ($request->has('nama_barang') && $request->nama_barang != '') {
-            $query->where('nama_barang', $request->nama_barang);
+        if ($request->filled('search')) {
+            $query->where('no_ido', 'like', '%' . $request->search . '%');
         }
-        
-        // Filter by type
-        if ($request->has('type') && $request->type != '') {
-            $query->where('type', $request->type);
-        }
-        
-        // Filter by status
-        if ($request->has('status_proses') && $request->status_proses != '') {
-            $query->where('status_proses', $request->status_proses);
-        }
-        
-        $igis = $query->orderBy('tanggal_datang', 'desc')->paginate(20);
-        
-        // Get unique values for filters
-        $namaBarangList = Igi::select('nama_barang')->distinct()->pluck('nama_barang');
-        $typeList = Igi::select('type')->distinct()->pluck('type');
-        
-        return view('igi.index', compact('igis', 'namaBarangList', 'typeList'));
+
+        $bapbList = $query->orderBy('tanggal_datang', 'desc')
+                          ->paginate(20);
+
+        // Get unique wilayah untuk filter
+        $wilayahList = IgiBapb::select('wilayah')->distinct()->pluck('wilayah');
+
+        return view('igi.index', compact('bapbList', 'wilayahList'));
     }
 
+    // STEP 2: Form Create BAPB Header
     public function create()
     {
-        return view('igi.create');
+        return view('igi.create-bapb');
     }
 
-    public function store(Request $request)
+    // STEP 3: Store BAPB Header
+    public function storeBapb(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'no_do' => 'required|unique:igi_master,no_do',
-            'nama_barang' => 'required|string|max:255',
-            'type' => 'required|string|max:255',
-            'serial_number' => 'required|unique:igi_master,serial_number',
-            'total_scan' => 'required|integer|min:0',
+        $request->validate([
+            'pemilik' => 'required|in:Linknet,Telkomsel',
+            'no_ido' => 'required|unique:igi_bapb,no_ido',
+            'wilayah' => 'required|string|max:100',
+            'jumlah' => 'required|integer|min:1',
         ], [
-            'no_do.required' => 'No DO wajib diisi',
-            'no_do.unique' => 'No DO sudah terdaftar dalam sistem',
-            'nama_barang.required' => 'Nama Barang wajib diisi',
-            'type.required' => 'Type wajib diisi',
-            'serial_number.required' => 'Serial Number wajib diisi',
-            'serial_number.unique' => 'Serial Number sudah terdaftar dalam sistem',
-            'total_scan.required' => 'Total Scan wajib diisi',
-            'total_scan.integer' => 'Total Scan harus berupa angka',
-            'total_scan.min' => 'Total Scan minimal 0',
+            'no_ido.unique' => 'No. IDO sudah terdaftar di sistem',
+            'jumlah.min' => 'Jumlah minimal 1',
         ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
+        $bapb = IgiBapb::create([
+            'pemilik' => $request->pemilik,
+            'tanggal_datang' => Carbon::now(),
+            'no_ido' => $request->no_ido,
+            'wilayah' => $request->wilayah,
+            'jumlah' => $request->jumlah,
+            'total_scan' => 0
+        ]);
 
-        DB::beginTransaction();
-        try {
-            // 1. Insert ke IGI MASTER (Permanen)
-            $master = IgiMaster::create([
-                'no_do' => $request->no_do,
-                'tanggal_datang' => Carbon::now(),
-                'nama_barang' => $request->nama_barang,
-                'type' => $request->type,
-                'serial_number' => $request->serial_number,
-                'total_scan' => $request->total_scan,
-                'status_proses' => 'IGI'
-            ]);
-
-            // 2. Insert ke IGI OPERASIONAL (Aktif)
-            Igi::create([
-                'master_id' => $master->id,
-                'no_do' => $request->no_do,
-                'tanggal_datang' => Carbon::now(),
-                'nama_barang' => $request->nama_barang,
-                'type' => $request->type,
-                'serial_number' => $request->serial_number,
-                'total_scan' => $request->total_scan,
-                'status_proses' => 'IGI'
-            ]);
-
-            DB::commit();
-            return redirect()->route('igi.index')
-                ->with('success', 'Data IGI berhasil ditambahkan ke Master & Operasional');
-                
-        } catch (\Exception $e) {
-            DB::rollback();
-            return redirect()->back()
-                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
-                ->withInput();
-        }
+        return redirect()->route('igi.scan-detail', $bapb->id)
+                         ->with('success', 'BAPB berhasil dibuat. Silakan scan barang.');
     }
 
-    public function edit($id)
+    // STEP 4: Form Scan Detail Barang
+    public function scanDetail($bapbId)
     {
-        $igi = Igi::with('master')->findOrFail($id);
-        return view('igi.edit', compact('igi'));
-    }
-
-    public function update(Request $request, $id)
-    {
-        $igi = Igi::findOrFail($id);
+        $bapb = IgiBapb::with('details')->findOrFail($bapbId);
         
-        $validator = Validator::make($request->all(), [
-            'nama_barang' => 'required|string|max:255',
-            'type' => 'required|string|max:255',
+        // Get recent scans untuk BAPB ini
+        $recentScans = IgiDetail::where('bapb_id', $bapbId)
+                                ->with('scanner')
+                                ->orderBy('scan_time', 'desc')
+                                ->paginate(20);
+
+        return view('igi.scan-detail', compact('bapb', 'recentScans'));
+    }
+
+    // API: Get Merk by Jenis
+    public function getMerkByJenis($jenis)
+    {
+        $merkList = MasterMerk::active()
+                              ->byJenis($jenis)
+                              ->orderBy('merk')
+                              ->get(['id', 'merk']);
+
+        return response()->json($merkList);
+    }
+
+    // API: Get Type by Merk
+    public function getTypeByMerk($merkId)
+    {
+        $typeList = MasterType::active()
+                              ->where('merk_id', $merkId)
+                              ->orderBy('type')
+                              ->get(['id', 'type']);
+
+        return response()->json($typeList);
+    }
+
+    // STEP 5: Store Detail Barang (Scan)
+    public function storeDetail(Request $request)
+    {
+        $request->validate([
+            'bapb_id' => 'required|exists:igi_bapb,id',
+            'jenis' => 'required|in:STB,ONT,ROUTER',
+            'merk' => 'required|string',
+            'type' => 'required|string',
+            'serial_number' => 'required|unique:igi_details,serial_number,NULL,id,deleted_at,NULL',
+            'mac_address' => 'required|string',
+            'stb_id' => 'nullable|string', // Required jika jenis = STB
         ], [
-            'nama_barang.required' => 'Nama Barang wajib diisi',
-            'type.required' => 'Type wajib diisi',
+            'serial_number.unique' => 'Serial Number sudah terdaftar!',
         ]);
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        DB::beginTransaction();
-        try {
-            // Update IGI Operasional
-            $igi->update([
-                'nama_barang' => $request->nama_barang,
-                'type' => $request->type,
-            ]);
-
-            // Update IGI Master juga
-            $igi->master->update([
-                'nama_barang' => $request->nama_barang,
-                'type' => $request->type,
-            ]);
-
-            DB::commit();
-            return redirect()->route('igi.index')
-                ->with('success', 'Data IGI berhasil diperbarui di Master & Operasional');
-                
-        } catch (\Exception $e) {
-            DB::rollback();
-            return redirect()->back()
-                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage())
-                ->withInput();
-        }
-    }
-
-    public function destroy($id)
-    {
-        DB::beginTransaction();
-        try {
-            $igi = Igi::findOrFail($id);
-            $master = $igi->master;
-            
-            // Cek apakah sudah ada proses
-            if ($igi->ujiFungsi()->exists() || 
-                $igi->repair()->exists() || 
-                $igi->rekondisi()->exists() || 
-                $igi->serviceHandling()->exists() || 
-                $igi->packing()->exists()) {
-                
-                return redirect()->back()
-                    ->with('error', 'Tidak dapat menghapus data yang sudah memiliki riwayat proses. Hapus proses terkait terlebih dahulu.');
-            }
-            
-            // Hapus dari operasional (soft delete)
-            $igi->delete();
-            
-            // Hapus dari master juga (permanent delete)
-            // OPSIONAL: Atau biarkan di master untuk histori
-            $master->delete();
-            
-            DB::commit();
-            return redirect()->route('igi.index')
-                ->with('success', 'Data IGI berhasil dihapus');
-                
-        } catch (\Exception $e) {
-            DB::rollback();
-            return redirect()->back()
-                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
-        }
-    }
-    
-    // Method untuk get data by serial number (untuk scanning)
-    public function getBySerial($serialNumber)
-    {
-        $igi = Igi::where('serial_number', $serialNumber)
-            ->with(['master', 'ujiFungsi', 'repair', 'rekondisi'])
-            ->first();
-            
-        if (!$igi) {
+        // Validation: STB ID wajib untuk STB
+        if ($request->jenis === 'STB' && empty($request->stb_id)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Serial Number tidak ditemukan dalam database IGI'
-            ], 404);
+                'message' => 'STB ID wajib diisi untuk jenis STB'
+            ], 422);
         }
-        
-        return response()->json([
-            'success' => true,
-            'data' => $igi
+
+        DB::beginTransaction();
+        try {
+            $bapb = IgiBapb::findOrFail($request->bapb_id);
+
+            // Check jika sudah mencapai batas
+            if ($bapb->total_scan >= $bapb->jumlah) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Total scan sudah mencapai batas jumlah BAPB!'
+                ], 422);
+            }
+
+            // Create detail - PERBAIKAN: Gunakan Auth::id()
+            $detail = IgiDetail::create([
+                'bapb_id' => $bapb->id,
+                'jenis' => $request->jenis,
+                'merk' => $request->merk,
+                'type' => $request->type,
+                'serial_number' => $request->serial_number,
+                'mac_address' => $request->mac_address,
+                'stb_id' => $request->stb_id,
+                'scan_time' => Carbon::now(),
+                'scan_by' => Auth::id(),  // PERBAIKAN
+                'status_proses' => 'IGI'
+            ]);
+
+            // Increment total_scan di BAPB
+            $bapb->incrementTotalScan();
+
+            // Log activity - PERBAIKAN: Gunakan Auth::id()
+            $detail->logActivity('IGI', 'N/A', Auth::id(), 'Barang masuk ke IGI');
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Barang berhasil di-scan!',
+                'data' => $detail->load('scanner'),
+                'total_scan' => $bapb->fresh()->total_scan,
+                'jumlah' => $bapb->jumlah
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Edit BAPB Header
+    public function edit($id)
+    {
+        $bapb = IgiBapb::findOrFail($id);
+        return view('igi.edit-bapb', compact('bapb'));
+    }
+
+    // Update BAPB Header
+    public function update(Request $request, $id)
+    {
+        $bapb = IgiBapb::findOrFail($id);
+
+        $request->validate([
+            'pemilik' => 'required|in:Linknet,Telkomsel',
+            'wilayah' => 'required|string|max:100',
+            'jumlah' => 'required|integer|min:' . $bapb->total_scan,
+        ], [
+            'jumlah.min' => 'Jumlah tidak boleh kurang dari total yang sudah di-scan (' . $bapb->total_scan . ')',
         ]);
+
+        $bapb->update([
+            'pemilik' => $request->pemilik,
+            'wilayah' => $request->wilayah,
+            'jumlah' => $request->jumlah,
+        ]);
+
+        return redirect()->route('igi.index')
+                         ->with('success', 'BAPB berhasil diperbarui');
+    }
+
+    // Delete Detail (dikurangi dari total_scan)
+    public function deleteDetail($id)
+    {
+        DB::beginTransaction();
+        try {
+            $detail = IgiDetail::findOrFail($id);
+            $bapb = $detail->bapb;
+
+            // Check jika sudah ada proses lanjutan
+            if ($detail->status_proses !== 'IGI') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak bisa hapus. Barang sudah masuk proses: ' . $detail->status_proses
+                ], 403);
+            }
+
+            // Soft delete detail
+            $detail->delete();
+
+            // Decrement total_scan
+            $bapb->decrementTotalScan();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data berhasil dihapus'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

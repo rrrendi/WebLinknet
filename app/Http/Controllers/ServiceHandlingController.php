@@ -1,193 +1,80 @@
 <?php
-
+// app/Http/Controllers/ServiceHandlingController.php
 namespace App\Http\Controllers;
 
-use App\Models\ServiceHandling;
-use App\Models\UjiFungsi;
-use App\Models\Repair;
-use App\Models\Igi;
+use App\Models\{ServiceHandling, IgiDetail};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class ServiceHandlingController extends Controller
 {
     public function index()
     {
-        $monitoring = $this->getMonitoringData();
-        $recentService = ServiceHandling::with('igi')->orderBy('waktu_service', 'desc')->paginate(10);
-        
+        $monitoring = $this->getMonitoring();
+        $recentService = ServiceHandling::with(['igiDetail.bapb', 'user'])
+            ->orderBy('service_time', 'desc')
+            ->paginate(20);
         return view('service-handling.index', compact('monitoring', 'recentService'));
     }
 
-    public function getMonitoring()
+    private function getMonitoring()
     {
-        $monitoring = $this->getMonitoringData();
-        return response()->json($monitoring);
-    }
-
-    private function getMonitoringData()
-    {
-        $categories = ['ONT', 'STB', 'ROUTER'];
-        $monitoring = [];
-
-        foreach ($categories as $category) {
-            $count = ServiceHandling::whereHas('igi', function($query) use ($category) {
-                $query->where('nama_barang', $category);
-            })->count();
-            
-            $monitoring[$category] = $count;
+        $data = [];
+        foreach (['Linknet', 'Telkomsel'] as $pemilik) {
+            foreach (['STB', 'ONT', 'ROUTER'] as $jenis) {
+                $count = ServiceHandling::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
+                    $q->whereHas('bapb', fn($q2) => $q2->where('pemilik', $pemilik))
+                        ->where('jenis', $jenis);
+                })->count();
+                $data[$pemilik][$jenis] = $count;
+            }
+            $data[$pemilik]['TOTAL'] = array_sum($data[$pemilik]);
         }
-
-        $monitoring['TOTAL'] = array_sum($monitoring);
-        return $monitoring;
-    }
-
-    public function getNokData(Request $request)
-    {
-        // Get all NOK items from Uji Fungsi and Repair
-        $ujiFungsiNok = UjiFungsi::with('igi')
-            ->where('status', 'NOK')
-            ->get()
-            ->map(function($item) {
-                return [
-                    'igi_id' => $item->igi_id,
-                    'serial_number' => $item->igi->serial_number,
-                    'nama_barang' => $item->igi->nama_barang,
-                    'type' => $item->igi->type,
-                    'status' => $item->status,
-                    'sumber' => 'UJI_FUNGSI',
-                    'timestamp' => $item->waktu_uji
-                ];
-            });
-
-        $repairNok = Repair::with('igi')
-            ->where('status', 'NOK')
-            ->get()
-            ->map(function($item) {
-                return [
-                    'igi_id' => $item->igi_id,
-                    'serial_number' => $item->igi->serial_number,
-                    'nama_barang' => $item->igi->nama_barang,
-                    'type' => $item->igi->type,
-                    'status' => $item->status,
-                    'sumber' => 'REPAIR',
-                    'timestamp' => $item->waktu_repair
-                ];
-            });
-
-        $nokData = $ujiFungsiNok->concat($repairNok);
-
-        // Apply search filter
-        if ($request->has('search') && $request->search != '') {
-            $search = strtolower($request->search);
-            $nokData = $nokData->filter(function($item) use ($search) {
-                return stripos($item['serial_number'], $search) !== false ||
-                       stripos($item['nama_barang'], $search) !== false ||
-                       stripos($item['type'], $search) !== false;
-            });
-        }
-
-        // Apply category filter
-        if ($request->has('category') && $request->category != '' && $request->category != 'Semua') {
-            $nokData = $nokData->filter(function($item) use ($request) {
-                return $item['nama_barang'] === $request->category;
-            });
-        }
-
-        return response()->json($nokData->sortByDesc('timestamp')->values());
+        return $data;
     }
 
     public function checkSerial(Request $request)
     {
-        $serialNumber = $request->serial_number;
-        
-        $igi = Igi::where('serial_number', $serialNumber)->first();
-        
-        if (!$igi) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Serial Number tidak ditemukan dalam database IGI'
-            ], 404);
+        $detail = IgiDetail::where('serial_number', $request->serial_number)->first();
+        if (!$detail) {
+            return response()->json(['success' => false, 'message' => 'Serial Number tidak ditemukan!'], 404);
         }
-
-        // VALIDASI: Harus ada uji_fungsi NOK ATAU repair NOK
-        $ujiFungsiNok = $igi->ujiFungsi()->where('status', 'NOK')->first();
-        $repairNok = $igi->repair()->where('status', 'NOK')->first();
-
-        if (!$ujiFungsiNok && !$repairNok) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Service Handling hanya untuk barang dengan status NOK dari Uji Fungsi atau Repair'
-            ], 400);
-        }
-
-        $sumber = $repairNok ? 'REPAIR' : 'UJI_FUNGSI';
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'igi_id' => $igi->id,
-                'nama_barang' => $igi->nama_barang,
-                'type' => $igi->type,
-                'serial_number' => $igi->serial_number,
-                'sumber' => $sumber
-            ]
-        ]);
+        return response()->json(['success' => true, 'data' => [
+            'id' => $detail->id,
+            'jenis' => $detail->jenis,
+            'merk' => $detail->merk,
+            'type' => $detail->type,
+            'serial_number' => $detail->serial_number
+        ]]);
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'igi_id' => 'required|exists:igi,id',
-            'sumber' => 'required|in:UJI_FUNGSI,REPAIR',
-            'keterangan' => 'nullable|string'
-        ]);
-
         DB::beginTransaction();
         try {
-            $igi = Igi::findOrFail($request->igi_id);
-            
-            // VALIDASI: Harus ada uji_fungsi NOK ATAU repair NOK
-            $ujiFungsiNok = $igi->ujiFungsi()->where('status', 'NOK')->exists();
-            $repairNok = $igi->repair()->where('status', 'NOK')->exists();
+            $detail = IgiDetail::findOrFail($request->igi_detail_id);
 
-            if (!$ujiFungsiNok && !$repairNok) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Service Handling hanya untuk barang NOK'
-                ], 400);
-            }
-
-            // Insert Service Handling
-            $serviceHandling = ServiceHandling::create([
-                'igi_id' => $igi->id,
-                'sumber' => $request->sumber,
-                'status' => 'NOK',
-                'keterangan' => $request->keterangan,
-                'waktu_service' => Carbon::now()
+            $service = ServiceHandling::create([
+                'igi_detail_id' => $detail->id,
+                'service_time' => Carbon::now(),
+                'user_id' => Auth::id(),
+                'catatan' => $request->catatan
             ]);
 
-            // Update status di IGI Operasional
-            $igi->update(['status_proses' => 'SERVICE_HANDLING']);
-
-            // Update status di IGI Master
-            $igi->master->update(['status_proses' => 'SERVICE_HANDLING']);
+            $detail->updateStatusProses('SERVICE_HANDLING');
+            $detail->logActivity('SERVICE_HANDLING', 'NOK', Auth::id());
 
             DB::commit();
-
             return response()->json([
                 'success' => true,
-                'message' => 'Data Service Handling berhasil disimpan',
-                'data' => $serviceHandling->load('igi')
+                'message' => 'Service Handling berhasil!',
+                'data' => $service->load(['igiDetail.bapb', 'user'])
             ]);
-            
         } catch (\Exception $e) {
             DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -195,34 +82,30 @@ class ServiceHandlingController extends Controller
     {
         DB::beginTransaction();
         try {
-            $serviceHandling = ServiceHandling::with('igi.master')->findOrFail($id);
-            $igi = $serviceHandling->igi;
-            
-            // ROLLBACK LOGIC: Kembali sesuai sumber
-            if ($serviceHandling->sumber === 'REPAIR') {
-                $igi->update(['status_proses' => 'REPAIR']);
-                $igi->master->update(['status_proses' => 'REPAIR']);
-            } else {
-                $igi->update(['status_proses' => 'UJI_FUNGSI']);
-                $igi->master->update(['status_proses' => 'UJI_FUNGSI']);
+            $service = ServiceHandling::with('igiDetail')->findOrFail($id);
+
+            $currentUser = Auth::user();
+
+            // Cek: Admin bisa hapus semua, user biasa hanya milik sendiri
+            $isAdmin = ($currentUser->role === 'admin');
+            $isOwner = ($service->user_id == $currentUser->id);
+
+            if (!$isAdmin && !$isOwner) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses untuk menghapus data ini.'
+                ], 403);
             }
-            
-            // Delete record service handling
-            $serviceHandling->delete();
-            
+
+            $service->delete();
+            $service->igiDetail->updateStatusProses('REKONDISI');
+            $service->igiDetail->activityLogs()->where('aktivitas', 'SERVICE_HANDLING')->delete();
+
             DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Data service handling berhasil dihapus. Status barang dikembalikan.'
-            ]);
-            
+            return response()->json(['success' => true, 'message' => 'Berhasil dihapus!']);
         } catch (\Exception $e) {
             DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }

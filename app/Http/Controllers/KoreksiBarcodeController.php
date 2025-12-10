@@ -1,165 +1,212 @@
 <?php
+// app/Http/Controllers/KoreksiBarcodeController.php
 
 namespace App\Http\Controllers;
 
-use App\Models\Igi;
-use App\Models\KoreksiBarcode;
-use App\Models\UjiFungsi;
-use App\Models\Repair;
-use App\Models\Rekondisi;
-use App\Models\ServiceHandling;
-use App\Models\Packing;
+use App\Models\IgiDetail;
+use App\Models\ActivityLog;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class KoreksiBarcodeController extends Controller
 {
     public function index()
     {
-        $history = KoreksiBarcode::with(['user', 'igi'])
-            ->orderBy('tanggal_koreksi', 'desc')
-            ->paginate(20);
-        
-        return view('koreksi-barcode.index', compact('history'));
+        return view('koreksi-barcode.index');
     }
 
+    // Search Serial Number
     public function search(Request $request)
     {
         $request->validate([
             'serial_number' => 'required'
-        ], [
-            'serial_number.required' => 'Serial Number wajib diisi'
         ]);
 
-        $igi = Igi::with('master')->where('serial_number', $request->serial_number)->first();
+        $detail = IgiDetail::with(['bapb', 'scanner'])
+                           ->where('serial_number', $request->serial_number)
+                           ->first();
 
-        if (!$igi) {
+        if (!$detail) {
             return response()->json([
                 'success' => false,
-                'message' => 'Serial Number tidak ditemukan dalam database IGI'
+                'message' => 'Serial Number tidak ditemukan!'
             ], 404);
         }
 
         return response()->json([
             'success' => true,
             'data' => [
-                'id' => $igi->id,
-                'no_do' => $igi->no_do,
-                'tanggal_datang' => $igi->tanggal_datang,
-                'nama_barang' => $igi->nama_barang,
-                'type' => $igi->type,
-                'serial_number' => $igi->serial_number,
-                'status_proses' => $igi->status_proses
+                'id' => $detail->id,
+                'pemilik' => $detail->bapb->pemilik,
+                'wilayah' => $detail->bapb->wilayah,
+                'tanggal_datang' => $detail->bapb->tanggal_datang->format('d-m-Y'),
+                'serial_number' => $detail->serial_number,
+                'mac_address' => $detail->mac_address,
+                'stb_id' => $detail->stb_id,
+                'jenis' => $detail->jenis,
+                'merk' => $detail->merk,
+                'type' => $detail->type,
             ]
         ]);
     }
 
-    public function tracking($serialNumber)
+    // Get Activity History
+    public function getActivityHistory($id)
     {
-        $igi = Igi::where('serial_number', $serialNumber)->first();
+        $detail = IgiDetail::findOrFail($id);
         
-        if (!$igi) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Serial Number tidak ditemukan'
-            ], 404);
-        }
+        $activities = $detail->activityLogs()
+                             ->with('user')
+                             ->orderBy('tanggal', 'desc')
+                             ->get()
+                             ->map(function($activity) {
+                                 return [
+                                     'id' => $activity->id,
+                                     'aktivitas' => $activity->aktivitas,
+                                     'tanggal' => $activity->tanggal->format('d-m-Y H:i:s'),
+                                     'result' => $activity->result,
+                                     'user_name' => $activity->user->name,
+                                     'user_id' => $activity->user_id,
+                                     'can_delete' => auth()->user()->canDeleteActivity($activity->user_id),
+                                     'keterangan' => $activity->keterangan
+                                 ];
+                             });
 
-        $tracking = [
-            'uji_fungsi' => $igi->ujiFungsi()->orderBy('created_at', 'desc')->first(),
-            'repair' => $igi->repair()->orderBy('created_at', 'desc')->first(),
-            'rekondisi' => $igi->rekondisi()->orderBy('created_at', 'desc')->first(),
-            'service_handling' => $igi->serviceHandling()->orderBy('created_at', 'desc')->first(),
-            'packing' => $igi->packing()->orderBy('created_at', 'desc')->first(),
-        ];
-
-        return response()->json($tracking);
+        return response()->json([
+            'success' => true,
+            'data' => $activities
+        ]);
     }
 
-    public function updateData(Request $request)
+    // Update Data (Koreksi)
+    public function update(Request $request, $id)
     {
         $request->validate([
-            'igi_id' => 'required|exists:igi,id',
-            'nama_barang' => 'required|in:ONT,STB,ROUTER',
-            'type' => 'required|string|max:255'
-        ], [
-            'igi_id.required' => 'IGI ID wajib diisi',
-            'igi_id.exists' => 'Data IGI tidak ditemukan',
-            'nama_barang.required' => 'Nama Barang wajib diisi',
-            'nama_barang.in' => 'Nama Barang harus ONT, STB, atau ROUTER',
-            'type.required' => 'Type wajib diisi'
+            'mac_address' => 'required|string',
+            'jenis' => 'required|in:STB,ONT,ROUTER',
+            'merk' => 'required|string',
+            'type' => 'required|string',
+            'stb_id' => 'nullable|string'
         ]);
 
         DB::beginTransaction();
         try {
-            $igi = Igi::with('master')->findOrFail($request->igi_id);
-            
+            $detail = IgiDetail::findOrFail($id);
+
             // Simpan data lama untuk log
-            $namaBarangLama = $igi->nama_barang;
-            $typeLama = $igi->type;
-            
-            // Cek apakah ada perubahan
-            if ($namaBarangLama === $request->nama_barang && $typeLama === $request->type) {
+            $dataLama = [
+                'mac_address' => $detail->mac_address,
+                'jenis' => $detail->jenis,
+                'merk' => $detail->merk,
+                'type' => $detail->type,
+                'stb_id' => $detail->stb_id
+            ];
+
+            $dataBaru = [
+                'mac_address' => $request->mac_address,
+                'jenis' => $request->jenis,
+                'merk' => $request->merk,
+                'type' => $request->type,
+                'stb_id' => $request->stb_id
+            ];
+
+            // Check apakah ada perubahan
+            if ($dataLama == $dataBaru) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak ada perubahan data'
+                    'message' => 'Tidak ada perubahan data!'
                 ], 400);
             }
 
-            // Simpan log koreksi
-            KoreksiBarcode::create([
-                'igi_id' => $igi->id,
-                'nama_barang_lama' => $namaBarangLama,
-                'nama_barang_baru' => $request->nama_barang,
-                'type_lama' => $typeLama,
-                'type_baru' => $request->type,
-                'tanggal_koreksi' => Carbon::now(),
-                'user_id' => Auth::id()
-            ]);
+            // Update data
+            $detail->update($dataBaru);
 
-            // Update di IGI Operasional
-            $igi->update([
-                'nama_barang' => $request->nama_barang,
-                'type' => $request->type
-            ]);
-
-            // Update di IGI Master
-            $igi->master->update([
-                'nama_barang' => $request->nama_barang,
-                'type' => $request->type
+            // Log koreksi
+            ActivityLog::create([
+                'igi_detail_id' => $detail->id,
+                'aktivitas' => 'KOREKSI',
+                'tanggal' => now(),
+                'result' => 'N/A',
+                'user_id' => auth()->id(),
+                'keterangan' => 'Koreksi data barang',
+                'data_lama' => $dataLama,
+                'data_baru' => $dataBaru
             ]);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data barang berhasil diperbarui di Master & Operasional'
+                'message' => 'Data berhasil diperbarui!'
             ]);
 
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
                 'success' => false,
-                'message' => 'Terjadi kesalahan: ' . $e->getMessage()
+                'message' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
 
-    public function history(Request $request)
+    // Delete Activity (hanya yang membuat)
+    public function deleteActivity($id)
     {
-        $query = KoreksiBarcode::with(['user', 'igi']);
+        DB::beginTransaction();
+        try {
+            $activity = ActivityLog::with('igiDetail')->findOrFail($id);
 
-        if ($request->has('start_date') && $request->start_date != '') {
-            $query->whereDate('tanggal_koreksi', '>=', $request->start_date);
-        }
-        if ($request->has('end_date') && $request->end_date != '') {
-            $query->whereDate('tanggal_koreksi', '<=', $request->end_date);
-        }
+            // Check permission
+            if (!auth()->user()->canDeleteActivity($activity->user_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki izin untuk menghapus aktivitas ini!'
+                ], 403);
+            }
 
-        $history = $query->orderBy('tanggal_koreksi', 'desc')->paginate(20);
-        
-        return view('koreksi-barcode.history', compact('history'));
+            $detail = $activity->igiDetail;
+            $aktivitasType = $activity->aktivitas;
+
+            // Hapus record terkait
+            switch ($aktivitasType) {
+                case 'UJI_FUNGSI':
+                    $detail->ujiFungsi()->where('user_id', $activity->user_id)->delete();
+                    $detail->updateStatusProses('IGI');
+                    break;
+                case 'REPAIR':
+                    $detail->repair()->where('user_id', $activity->user_id)->delete();
+                    $detail->updateStatusProses('UJI_FUNGSI');
+                    break;
+                case 'REKONDISI':
+                    $detail->rekondisi()->where('user_id', $activity->user_id)->delete();
+                    $detail->updateStatusProses('REPAIR');
+                    break;
+                case 'SERVICE_HANDLING':
+                    $detail->serviceHandling()->where('user_id', $activity->user_id)->delete();
+                    $detail->updateStatusProses('REKONDISI');
+                    break;
+                case 'PACKING':
+                    $detail->packing()->where('user_id', $activity->user_id)->delete();
+                    $detail->updateStatusProses('REKONDISI');
+                    break;
+            }
+
+            // Hapus activity log
+            $activity->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Aktivitas berhasil dihapus!'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
