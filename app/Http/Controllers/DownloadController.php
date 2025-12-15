@@ -31,19 +31,35 @@ class DownloadController extends Controller
         try {
             $query = $this->getQueryByModul($request->modul);
 
-            // Filter by BAPB
+            // Filter by BAPB - PERBAIKAN DI SINI
             if ($request->filled('pemilik') || $request->filled('wilayah') || $request->filled('tanggal_datang')) {
-                $query->whereHas('igiDetail.bapb', function($q) use ($request) {
-                    if ($request->filled('pemilik')) {
-                        $q->where('pemilik', $request->pemilik);
-                    }
-                    if ($request->filled('wilayah')) {
-                        $q->where('wilayah', $request->wilayah);
-                    }
-                    if ($request->filled('tanggal_datang')) {
-                        $q->whereDate('tanggal_datang', $request->tanggal_datang);
-                    }
-                });
+                // Untuk modul IGI, langsung gunakan 'bapb'
+                if ($request->modul === 'igi') {
+                    $query->whereHas('bapb', function($q) use ($request) {
+                        if ($request->filled('pemilik')) {
+                            $q->where('pemilik', $request->pemilik);
+                        }
+                        if ($request->filled('wilayah')) {
+                            $q->where('wilayah', $request->wilayah);
+                        }
+                        if ($request->filled('tanggal_datang')) {
+                            $q->whereDate('tanggal_datang', $request->tanggal_datang);
+                        }
+                    });
+                } else {
+                    // Untuk modul lain, gunakan 'igiDetail.bapb'
+                    $query->whereHas('igiDetail.bapb', function($q) use ($request) {
+                        if ($request->filled('pemilik')) {
+                            $q->where('pemilik', $request->pemilik);
+                        }
+                        if ($request->filled('wilayah')) {
+                            $q->where('wilayah', $request->wilayah);
+                        }
+                        if ($request->filled('tanggal_datang')) {
+                            $q->whereDate('tanggal_datang', $request->tanggal_datang);
+                        }
+                    });
+                }
             }
 
             // Filter by date range
@@ -52,7 +68,12 @@ class DownloadController extends Controller
                 $query->whereBetween($dateColumn, [$request->tanggal_awal, $request->tanggal_akhir]);
             }
 
-            $data = $query->with(['igiDetail.bapb', 'user'])->get();
+            // Load relationships - PERBAIKAN DI SINI
+            if ($request->modul === 'igi') {
+                $data = $query->with(['bapb', 'scanner'])->get();
+            } else {
+                $data = $query->with(['igiDetail.bapb', 'user'])->get();
+            }
 
             if ($data->isEmpty()) {
                 return redirect()->back()->with('error', 'Tidak ada data yang sesuai filter!');
@@ -93,6 +114,14 @@ class DownloadController extends Controller
     private function getFileName($modul)
     {
         $date = date('d-m-Y');
-        return ucfirst(str_replace('_', ' ', $modul)) . "_{$date}.xlsx";
+        $modulName = match($modul) {
+            'igi' => 'IGI',
+            'uji_fungsi' => 'Uji_Fungsi',
+            'repair' => 'Repair',
+            'rekondisi' => 'Rekondisi',
+            'service_handling' => 'Service_Handling',
+            'packing' => 'Packing',
+        };
+        return "{$modulName}_Data_{$date}.xlsx";
     }
 }

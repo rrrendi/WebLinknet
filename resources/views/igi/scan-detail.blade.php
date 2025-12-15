@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Scan Detail Barang - ' . $bapb->no_ido)
-
+@section('page-title', 'Scan Detail Barang')
 @section('content')
 <div class="container-fluid">
     <!-- Header Info BAPB -->
