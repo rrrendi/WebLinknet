@@ -28,7 +28,7 @@
                         <h6 class="text-muted mb-3">{{ $pemilik }}</h6>
                         <div class="table-responsive mb-4">
                             <table class="table table-bordered text-center">
-                                <thead class="table-dark">
+                                <thead class="table">
                                     <tr>
                                         <th>STB</th>
                                         <th>ONT</th>

@@ -28,7 +28,7 @@
                         <h6 class="text-muted mb-3">{{ $pemilik }}</h6>
                         <div class="table-responsive mb-4">
                             <table class="table table-bordered text-center">
-                                <thead class="table-dark">
+                                <thead class="table">
                                     <tr>
                                         <th>STB</th>
                                         <th>ONT</th>
@@ -55,31 +55,6 @@
                             </table>
                         </div>
                     @endforeach
-
-                    {{-- Progress Summary --}}
-                    <div class="row mt-4">
-                        <div class="col-md-12">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h6 class="mb-3"><i class="bi bi-trophy"></i> Status Packing</h6>
-                                    <div class="row text-center">
-                                        <div class="col-md-4">
-                                            <h4 class="text-success">{{ array_sum(array_column($monitoring, 'TOTAL')) }}</h4>
-                                            <small class="text-muted">Total Barang Selesai Di-packing</small>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h4 class="text-primary">{{ array_sum(array_column($monitoring, 'TOTAL')) }}</h4>
-                                            <small class="text-muted">Siap Dikirim</small>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <h4 class="text-info">100%</h4>
-                                            <small class="text-muted">Tingkat Penyelesaian</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

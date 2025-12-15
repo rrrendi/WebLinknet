@@ -25,7 +25,7 @@
                     @foreach(['Linknet', 'Telkomsel'] as $pemilik)
                         <h6 class="text-muted mb-3">{{ $pemilik }}</h6>
                         <div class="table-responsive mb-4">
-                            <table class="table table-bordered text-center">
+                            <table class="table text-center">
                                 <thead class="table-dark">
                                     <tr><th>Jenis</th><th class="bg-success">OK</th><th class="bg-danger">NOK</th><th>Total</th></tr>
                                 </thead>
@@ -35,7 +35,7 @@
                                             <td><strong>{{ $jenis }}</strong></td>
                                             <td class="bg-success bg-opacity-10"><h5 class="text-success mb-0">{{ $monitoring[$pemilik][$jenis]['ok'] }}</h5></td>
                                             <td class="bg-danger bg-opacity-10"><h5 class="text-danger mb-0">{{ $monitoring[$pemilik][$jenis]['nok'] }}</h5></td>
-                                            <td class="bg-light"><h6 class="mb-0">{{ $monitoring[$pemilik][$jenis]['total'] }}</h6></td>
+                                            <td><h6 class="mb-0">{{ $monitoring[$pemilik][$jenis]['total'] }}</h6></td>
                                         </tr>
                                     @endforeach
                                     <tr class="table-secondary">

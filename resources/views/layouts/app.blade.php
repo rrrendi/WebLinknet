@@ -29,7 +29,7 @@
             --text-color: #212529;
             --text-muted: #6c757d;
             --border-color: #dee2e6;
-            --sidebar-bg: linear-gradient(180deg, #000000ff 0%, var(--primary-color) 100%);
+            --sidebar-bg: linear-gradient(180deg, #001f3aff 0%, #3b85c7ff 100%);
             --navbar-bg: #ffffff;
             --table-hover: rgba(0, 68, 131, 0.05);
             --page-title-color: #000000ff;
@@ -42,7 +42,7 @@
             --text-color: #e0e0e0;
             --text-muted: #a0a0a0;
             --border-color: #3d3d3d;
-            --sidebar-bg: linear-gradient(180deg, #0a0a0a 0%, #1a2332 100%);
+            --sidebar-bg: linear-gradient(180deg, #0a0a0a 0%, var(--primary-color) 100%);
             --navbar-bg: #2d2d2d;
             --table-hover: rgba(255, 255, 255, 0.05);
             --page-title-color: #ffffff;
@@ -209,8 +209,8 @@
         }
 
         .table-dark {
-            --bs-table-bg: #ffffffff;
-            --bs-table-color: #fff;
+            --bs-table-bg: #dfdfdfff;
+            --bs-table-color: #ffffffff;
         }
 
         /* BUTTONS */
