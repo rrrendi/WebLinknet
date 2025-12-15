@@ -34,7 +34,7 @@ class IgiController extends Controller
         }
 
         $bapbList = $query->orderBy('tanggal_datang', 'desc')
-                          ->paginate(5);
+                          ->paginate(10);
 
         // Get unique wilayah untuk filter
         $wilayahList = IgiBapb::select('wilayah')->distinct()->pluck('wilayah');

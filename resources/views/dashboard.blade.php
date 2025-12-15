@@ -245,7 +245,7 @@
                         <div class="progress" style="height: 25px;">
                             <div class="progress-bar bg-success" 
                                  role="progressbar" 
-                                 style="width: {{ $percentageJenis }}%;"
+                                 style="width: {{ $percentageJenis }}%"
                                  aria-valuenow="{{ $percentageJenis }}" 
                                  aria-valuemin="0" 
                                  aria-valuemax="100">

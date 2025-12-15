@@ -1,5 +1,5 @@
 <?php
-
+// app/Http/Controllers/UserManagementController.php
 namespace App\Http\Controllers;
 
 use App\Models\User;
@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Auth;
 
 class UserManagementController extends Controller
 {
-
     public function index()
     {
         $users = User::orderBy('created_at', 'desc')->paginate(20);
@@ -18,6 +17,7 @@ class UserManagementController extends Controller
 
     public function create()
     {
+        // Tidak perlu kirim $user ke create view
         return view('users.create');
     }
 
@@ -85,6 +85,7 @@ class UserManagementController extends Controller
         }
 
         $user->delete();
+
         return redirect()->route('users.index')->with('success', 'User berhasil dihapus!');
     }
 }

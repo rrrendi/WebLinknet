@@ -25,9 +25,9 @@
                         <select name="wilayah" class="form-select">
                             <option value="">Semua Wilayah</option>
                             @foreach($wilayahList as $wilayah)
-                                <option value="{{ $wilayah }}" {{ request('wilayah') === $wilayah ? 'selected' : '' }}>
-                                    {{ $wilayah }}
-                                </option>
+                            <option value="{{ $wilayah }}" {{ request('wilayah') === $wilayah ? 'selected' : '' }}>
+                                {{ $wilayah }}
+                            </option>
                             @endforeach
                         </select>
                     </div>
@@ -66,71 +66,71 @@
                     </thead>
                     <tbody>
                         @forelse($bapbList as $index => $bapb)
-                            @php
-                                $percentage = $bapb->jumlah > 0 ? round(($bapb->total_scan / $bapb->jumlah) * 100) : 0;
-                                $progressClass = $percentage >= 100 ? 'success' : 'warning';
-                            @endphp
-                            <tr>
-                                <td>{{ $bapbList->firstItem() + $index }}</td>
-                                <td>
-                                    <span class="badge bg-{{ $bapb->pemilik === 'Linknet' ? 'primary' : 'success' }}">
-                                        {{ $bapb->pemilik }}
-                                    </span>
-                                </td>
-                                <td>{{ $bapb->wilayah }}</td>
-                                <td><code>{{ $bapb->no_ido }}</code></td>
-                                <td>{{ $bapb->tanggal_datang->format('d-m-Y') }}</td>
-                                <td class="text-center">
-                                    <span class="badge bg-info">{{ $bapb->jumlah }}</span>
-                                </td>
-                                <td class="text-center">
-                                    @if($bapb->total_scan === 0)
-                                        <a href="{{ route('igi.scan-detail', $bapb->id) }}" class="btn btn-sm btn-warning">
-                                            <i class="bi bi-upc-scan"></i> Scan
-                                        </a>
-                                    @else
-                                        <a href="{{ route('igi.scan-detail', $bapb->id) }}" class="badge bg-success" style="text-decoration: none; font-size: 1rem;">
-                                            {{ $bapb->total_scan }}
-                                        </a>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="progress" style="height: 25px;">
-                                        <div class="progress-bar bg-{{ $progressClass }}" 
-                                             role="progressbar" 
-                                             style="width: {{ $percentage }}%;"
-                                             aria-valuenow="{{ $percentage }}" 
-                                             aria-valuemin="0" 
-                                             aria-valuemax="100">
-                                            {{ $percentage }}%
-                                        </div>
+                        @php
+                        $percentage = $bapb->jumlah > 0 ? round(($bapb->total_scan / $bapb->jumlah) * 100) : 0;
+                        $progressClass = $percentage >= 100 ? 'success' : 'warning';
+                        @endphp
+                        <tr>
+                            <td>{{ $bapbList->firstItem() + $index }}</td>
+                            <td>
+                                <span class="badge bg-{{ $bapb->pemilik === 'Linknet' ? 'primary' : 'success' }}">
+                                    {{ $bapb->pemilik }}
+                                </span>
+                            </td>
+                            <td>{{ $bapb->wilayah }}</td>
+                            <td><code>{{ $bapb->no_ido }}</code></td>
+                            <td>{{ $bapb->tanggal_datang->format('d-m-Y') }}</td>
+                            <td class="text-center">
+                                <span class="badge bg-info">{{ $bapb->jumlah }}</span>
+                            </td>
+                            <td class="text-center">
+                                @if($bapb->total_scan === 0)
+                                <a href="{{ route('igi.scan-detail', $bapb->id) }}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-upc-scan"></i> Scan
+                                </a>
+                                @else
+                                <a href="{{ route('igi.scan-detail', $bapb->id) }}" class="badge bg-success" style="text-decoration: none; font-size: 1rem;">
+                                    {{ $bapb->total_scan }}
+                                </a>
+                                @endif
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-{{ $progressClass }}"
+                                        role="progressbar"
+                                        style="width: {{ $percentage }}%"
+                                        aria-valuenow="{{ $percentage }}"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100">
+                                        {{ $percentage }}%
                                     </div>
-                                </td>
-                                <td>
-                                    <a href="{{ route('igi.scan-detail', $bapb->id) }}" class="btn btn-sm btn-primary" title="Scan Barang">
-                                        <i class="bi bi-upc-scan"></i>
-                                    </a>
-                                    <a href="{{ route('igi.edit', $bapb->id) }}" class="btn btn-sm btn-warning" title="Edit BAPB">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    @if($bapb->total_scan === 0)
-                                        <form action="{{ route('igi.destroy', $bapb->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus BAPB ini?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger" title="Hapus BAPB">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    @endif
-                                </td>
-                            </tr>
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{{ route('igi.scan-detail', $bapb->id) }}" class="btn btn-sm btn-primary" title="Scan Barang">
+                                    <i class="bi bi-upc-scan"></i>
+                                </a>
+                                <a href="{{ route('igi.edit', $bapb->id) }}" class="btn btn-sm btn-warning" title="Edit BAPB">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                @if($bapb->total_scan === 0)
+                                <form action="{{ route('igi.destroy', $bapb->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Yakin ingin menghapus BAPB ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Hapus BAPB">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                                @endif
+                            </td>
+                        </tr>
                         @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted">
-                                    <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                    Belum ada data BAPB. Klik "Tambah BAPB Baru" untuk mulai.
-                                </td>
-                            </tr>
+                        <tr>
+                            <td colspan="9" class="text-center text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                Belum ada data BAPB. Klik "Tambah BAPB Baru" untuk mulai.
+                            </td>
+                        </tr>
                         @endforelse
                     </tbody>
                 </table>

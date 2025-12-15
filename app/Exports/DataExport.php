@@ -8,8 +8,18 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
-class DataExport implements FromCollection, WithHeadings, WithMapping, WithTitle, ShouldAutoSize
+class DataExport implements 
+    FromCollection, 
+    WithHeadings, 
+    WithMapping, 
+    WithTitle, 
+    ShouldAutoSize,
+    WithEvents
 {
     protected $data;
     protected $modul;
@@ -139,8 +149,8 @@ class DataExport implements FromCollection, WithHeadings, WithMapping, WithTitle
                     $row->jenis,
                     $row->merk,
                     $row->type,
-                    $row->serial_number,
-                    $row->mac_address,
+                    $row->serial_number ?? '-',
+                    $row->mac_address ?? '-',
                     $row->stb_id ?? '-',
                     $row->scan_time->format('d-m-Y H:i:s'),
                     $row->scanner->name ?? '-',
@@ -222,6 +232,56 @@ class DataExport implements FromCollection, WithHeadings, WithMapping, WithTitle
             default:
                 return [$row];
         }
+    }
+
+    public function registerEvents(): array
+    {
+        return [
+            AfterSheet::class => function(AfterSheet $event) {
+                $sheet = $event->sheet->getDelegate();
+                $highestRow = $sheet->getHighestRow();
+                $highestColumn = $sheet->getHighestColumn();
+                
+                // Set format text untuk semua kolom
+                $sheet->getStyle('A1:' . $highestColumn . $highestRow)
+                    ->getNumberFormat()
+                    ->setFormatCode('@');
+                
+                // Konversi setiap cell ke string eksplisit untuk kolom tertentu
+                switch ($this->modul) {
+                    case 'igi':
+                        // Kolom I (Serial Number), J (MAC Address), K (STB ID)
+                        $textColumns = ['I', 'J', 'K'];
+                        break;
+                    case 'uji_fungsi':
+                    case 'repair':
+                    case 'rekondisi':
+                    case 'service_handling':
+                    case 'packing':
+                        // Kolom D (Serial Number)
+                        $textColumns = ['D'];
+                        break;
+                    default:
+                        $textColumns = [];
+                        break;
+                }
+                
+                // Set setiap cell sebagai string eksplisit
+                foreach ($textColumns as $column) {
+                    for ($row = 2; $row <= $highestRow; $row++) {
+                        $cell = $sheet->getCell($column . $row);
+                        $value = $cell->getValue();
+                        
+                        if ($value !== null && $value !== '' && $value !== '-') {
+                            $cell->setValueExplicit(
+                                (string)$value,
+                                DataType::TYPE_STRING
+                            );
+                        }
+                    }
+                }
+            },
+        ];
     }
 
     public function title(): string
