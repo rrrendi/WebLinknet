@@ -15,7 +15,7 @@ class PackingController extends Controller
         $monitoring = $this->getMonitoring();
         $recentPacking = Packing::with(['igiDetail.bapb', 'user'])
             ->orderBy('packing_time', 'desc')
-            ->paginate(20);
+            ->paginate(10);
 
         return view('packing.index', compact('monitoring', 'recentPacking'));
     }
@@ -47,6 +47,14 @@ class PackingController extends Controller
         // Harus sudah rekondisi
         if (!$detail->rekondisi()->exists()) {
             return response()->json(['success' => false, 'message' => 'Packing hanya untuk barang yang sudah Rekondisi!'], 400);
+        }
+
+        // Validasi: belum pernah di Packing
+        if ($detail->Packing()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Serial Number sudah pernah di Packing!'
+            ], 400);
         }
 
         return response()->json(['success' => true, 'data' => [

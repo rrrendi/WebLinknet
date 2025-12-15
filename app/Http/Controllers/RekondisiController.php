@@ -15,7 +15,7 @@ class RekondisiController extends Controller
         $monitoring = $this->getMonitoring();
         $recentRekondisi = Rekondisi::with(['igiDetail.bapb', 'user'])
             ->orderBy('rekondisi_time', 'desc')
-            ->paginate(20);
+            ->paginate(10);
 
         return view('rekondisi.index', compact('monitoring', 'recentRekondisi'));
     }
@@ -50,6 +50,14 @@ class RekondisiController extends Controller
 
         if (!$hasOkResult) {
             return response()->json(['success' => false, 'message' => 'Rekondisi hanya untuk barang dengan result OK!'], 400);
+        }
+
+        // Validasi: belum pernah di Rekondisi
+        if ($detail->Rekondisi()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Serial Number sudah pernah di Rekondisi!'
+            ], 400);
         }
 
         return response()->json(['success' => true, 'data' => [

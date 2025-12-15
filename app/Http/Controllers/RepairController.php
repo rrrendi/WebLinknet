@@ -16,7 +16,7 @@ class RepairController extends Controller
         $monitoring = $this->getMonitoringData();
         $recentRepairs = Repair::with(['igiDetail.bapb', 'user'])
             ->orderBy('repair_time', 'desc')
-            ->paginate(20);
+            ->paginate(10);
 
         return view('repair.index', compact('monitoring', 'recentRepairs'));
     }
@@ -85,6 +85,14 @@ class RepairController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Repair hanya untuk barang dengan Uji Fungsi NOK!'
+            ], 400);
+        }
+
+        // Validasi: belum pernah di Repair
+        if ($detail->Repair()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Serial Number sudah pernah di Repair!'
             ], 400);
         }
 

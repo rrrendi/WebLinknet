@@ -34,7 +34,7 @@ class IgiController extends Controller
         }
 
         $bapbList = $query->orderBy('tanggal_datang', 'desc')
-                          ->paginate(20);
+                          ->paginate(5);
 
         // Get unique wilayah untuk filter
         $wilayahList = IgiBapb::select('wilayah')->distinct()->pluck('wilayah');
@@ -84,7 +84,7 @@ class IgiController extends Controller
         $recentScans = IgiDetail::where('bapb_id', $bapbId)
                                 ->with('scanner')
                                 ->orderBy('scan_time', 'desc')
-                                ->paginate(20);
+                                ->paginate(10);
 
         return view('igi.scan-detail', compact('bapb', 'recentScans'));
     }

@@ -15,7 +15,7 @@ class ServiceHandlingController extends Controller
         $monitoring = $this->getMonitoring();
         $services = ServiceHandling::with(['igiDetail.bapb', 'user'])
             ->orderBy('service_time', 'desc')
-            ->paginate(20);
+            ->paginate(10);
 
         return view('service-handling.index', compact('monitoring', 'services'));
     }
@@ -42,6 +42,14 @@ class ServiceHandlingController extends Controller
 
         if (!$detail) {
             return response()->json(['success' => false, 'message' => 'Serial Number tidak ditemukan!'], 404);
+        }
+
+        // Validasi: belum pernah di Service Handling
+        if ($detail->ServiceHandling()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Serial Number sudah pernah di Service Handling!'
+            ], 400);
         }
 
         return response()->json(['success' => true, 'data' => [

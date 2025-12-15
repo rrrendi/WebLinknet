@@ -19,7 +19,7 @@ class UjiFungsiController extends Controller
         // Recent tests untuk TAB 2
         $recentTests = UjiFungsi::with(['igiDetail.bapb', 'user'])
             ->orderBy('uji_fungsi_time', 'desc')
-            ->paginate(20);
+            ->paginate(10);
 
         return view('uji-fungsi.index', compact('monitoring', 'recentTests'));
     }
