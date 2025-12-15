@@ -30,7 +30,7 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Pemilik</label>
-                                <select name="pemilik" class="form-select">
+                                <select name="pemilik" id="pemilik" class="form-select">
                                     <option value="">Semua Pemilik</option>
                                     @foreach($pemilikList as $pemilik)
                                     <option value="{{ $pemilik }}">{{ $pemilik }}</option>
@@ -40,11 +40,8 @@
                             
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Wilayah</label>
-                                <select name="wilayah" class="form-select">
+                                <select name="wilayah" id="wilayah" class="form-select">
                                     <option value="">Semua Wilayah</option>
-                                    @foreach($wilayahList as $wilayah)
-                                    <option value="{{ $wilayah }}">{{ $wilayah }}</option>
-                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -80,4 +77,48 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    loadWilayah('');
+    
+    $('#pemilik').on('change', function() {
+        const pemilik = $(this).val();
+        loadWilayah(pemilik);
+    });
+    
+    function loadWilayah(pemilik) {
+        $.ajax({
+            url: '{{ route("download.wilayah-by-pemilik") }}',
+            type: 'GET',
+            data: { pemilik: pemilik },
+            beforeSend: function() {
+                $('#wilayah').html('<option value="">Loading...</option>');
+                $('#wilayah').prop('disabled', true);
+            },
+            success: function(response) {
+                let options = '<option value="">Semua Wilayah</option>';
+                
+                if (response.length > 0) {
+                    response.forEach(function(wilayah) {
+                        options += `<option value="${wilayah}">${wilayah}</option>`;
+                    });
+                } else {
+                    options = '<option value="">Tidak ada wilayah</option>';
+                }
+                
+                $('#wilayah').html(options);
+                $('#wilayah').prop('disabled', false);
+            },
+            error: function(xhr) {
+                console.error('Error loading wilayah:', xhr);
+                $('#wilayah').html('<option value="">Error loading wilayah</option>');
+                $('#wilayah').prop('disabled', false);
+            }
+        });
+    }
+});
+</script>
+@endpush
 @endsection

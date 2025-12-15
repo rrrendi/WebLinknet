@@ -124,6 +124,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::prefix('download')->name('download.')->group(function () {
         Route::get('/', [DownloadController::class, 'index'])->name('index');
         Route::post('/export', [DownloadController::class, 'export'])->name('export');
+        Route::get('/wilayah-by-pemilik', [DownloadController::class, 'getWilayahByPemilik'])->name('wilayah-by-pemilik');
     });
 
     // ==========================================

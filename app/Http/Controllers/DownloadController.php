@@ -12,9 +12,30 @@ class DownloadController extends Controller
     public function index()
     {
         $pemilikList = ['Linknet', 'Telkomsel'];
-        $wilayahList = IgiBapb::select('wilayah')->distinct()->pluck('wilayah');
         
-        return view('download.index', compact('pemilikList', 'wilayahList'));
+        return view('download.index', compact('pemilikList'));
+    }
+
+    public function getWilayahByPemilik(Request $request)
+    {
+        $pemilik = $request->pemilik;
+        
+        if (empty($pemilik)) {
+            // Jika tidak ada pemilik dipilih, return semua wilayah
+            $wilayahList = IgiBapb::select('wilayah')
+                                  ->distinct()
+                                  ->orderBy('wilayah')
+                                  ->pluck('wilayah');
+        } else {
+            // Filter wilayah berdasarkan pemilik
+            $wilayahList = IgiBapb::where('pemilik', $pemilik)
+                                  ->select('wilayah')
+                                  ->distinct()
+                                  ->orderBy('wilayah')
+                                  ->pluck('wilayah');
+        }
+        
+        return response()->json($wilayahList);
     }
 
     public function export(Request $request)
