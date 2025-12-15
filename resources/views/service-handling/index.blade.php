@@ -194,6 +194,7 @@ $(document).ready(function() {
                     }
                 },
                 error: function(xhr) {
+                    playScanErrorSound(); // Play error sound
                     alert(xhr.responseJSON?.message || 'Serial Number tidak valid!');
                     $('#serialNumberService').val('').focus();
                 }
@@ -231,10 +232,14 @@ $(document).ready(function() {
                     $('#serviceTableBody').prepend(row);
                     $('#serialNumberService').val('').focus();
                     
+                    // Play success sound
+                    playScanSuccessSound();
+                    
                     console.log('✓ Service Handling berhasil disimpan');
                 }
             },
             error: function(xhr) {
+                playScanErrorSound(); // Play error sound
                 alert(xhr.responseJSON?.message || 'Error menyimpan data!');
                 $('#serialNumberService').val('').focus();
             }

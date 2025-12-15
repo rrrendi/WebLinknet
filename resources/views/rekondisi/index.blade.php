@@ -194,6 +194,7 @@ $(document).ready(function() {
                     }
                 },
                 error: function(xhr) {
+                    playScanErrorSound(); // Play error sound
                     alert(xhr.responseJSON?.message || 'Serial Number tidak valid!');
                     $('#serialNumberRekondisi').val('').focus();
                 }
@@ -231,11 +232,15 @@ $(document).ready(function() {
                     $('#rekondisiTableBody').prepend(row);
                     $('#serialNumberRekondisi').val('').focus();
                     
+                    // Play success sound
+                    playScanSuccessSound();
+                    
                     // Success sound/notification (optional)
                     console.log('✓ Rekondisi berhasil disimpan');
                 }
             },
             error: function(xhr) {
+                playScanErrorSound(); // Play error sound
                 alert(xhr.responseJSON?.message || 'Error menyimpan data!');
                 $('#serialNumberRekondisi').val('').focus();
             }

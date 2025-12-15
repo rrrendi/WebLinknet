@@ -83,6 +83,7 @@
                                 <div class="mb-3">
                                     <label class="form-label"><strong>Jenis Kerusakan</strong> <span class="text-danger">*</span></label>
                                     <select class="form-select" id="jenisKerusakan" name="jenis_kerusakan" required>
+                                        <option value="">-- Pilih Jenis Kerusakan --</option>
                                         <option value="Masih Hidup">Masih Hidup</option>
                                         <option value="Mati Total">Mati Total</option>
                                     </select>
@@ -212,6 +213,7 @@ $(document).ready(function() {
                 submitRepair();
             },
             error: function(xhr) {
+                playScanErrorSound(); // Play error sound
                 alert(xhr.responseJSON?.message || 'Error validasi serial number!');
                 $('#serialNumberRepair').val('').focus();
             }
@@ -254,9 +256,13 @@ $(document).ready(function() {
                 $('#RepairTableBody').prepend(row);
                 $('#serialNumberRepair').val('').focus();
                 
+                // Play success sound
+                playScanSuccessSound();
+                
                 // Jenis kerusakan tetap dipilih untuk scan berikutnya (sesuai PDF)
             },
             error: function(xhr) {
+                playScanErrorSound(); // Play error sound
                 alert(xhr.responseJSON?.message || 'Error menyimpan data repair!');
                 $('#serialNumberRepair').val('').focus();
             }

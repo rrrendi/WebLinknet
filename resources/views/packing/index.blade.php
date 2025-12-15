@@ -219,6 +219,7 @@ $(document).ready(function() {
                     }
                 },
                 error: function(xhr) {
+                    playScanErrorSound(); // Play error sound
                     alert(xhr.responseJSON?.message || 'Serial Number tidak valid!');
                     $('#serialNumberPacking').val('').focus();
                 }
@@ -256,10 +257,14 @@ $(document).ready(function() {
                     $('#packingTableBody').prepend(row);
                     $('#serialNumberPacking').val('').focus();
                     
+                    // Play success sound
+                    playScanSuccessSound();
+                    
                     console.log('✓ Packing berhasil disimpan - Barang siap dikirim!');
                 }
             },
             error: function(xhr) {
+                playScanErrorSound(); // Play error sound
                 alert(xhr.responseJSON?.message || 'Error menyimpan data!');
                 $('#serialNumberPacking').val('').focus();
             }

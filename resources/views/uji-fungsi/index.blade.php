@@ -183,6 +183,7 @@ $(document).ready(function() {
                 submitUjiFungsi();
             },
             error: function(xhr) {
+                playScanErrorSound(); // Play error sound
                 alert(xhr.responseJSON?.message || 'Error validasi serial number!');
                 $('#serialNumberUji').val('').focus();
             }
@@ -218,8 +219,12 @@ $(document).ready(function() {
                 
                 $('#ujiFungsiTableBody').prepend(row);
                 $('#serialNumberUji').val('').focus();
+                
+                // Play success sound
+                playScanSuccessSound();
             },
             error: function(xhr) {
+                playScanErrorSound(); // Play error sound
                 alert(xhr.responseJSON?.message || 'Error menyimpan data!');
                 $('#serialNumberUji').val('').focus();
             }
