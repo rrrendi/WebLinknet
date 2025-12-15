@@ -18,8 +18,7 @@
                         <div class="mb-3">
                             <label class="form-label">Pilih Modul <span class="text-danger">*</span></label>
                             <select name="modul" class="form-select" required>
-                                <option value="">Pilih Modul</option>
-                                <option value="igi">IGI (Incoming Goods)</option>
+                                <option value="igi">I.G.I</option>
                                 <option value="uji_fungsi">Uji Fungsi</option>
                                 <option value="repair">Repair</option>
                                 <option value="rekondisi">Rekondisi</option>

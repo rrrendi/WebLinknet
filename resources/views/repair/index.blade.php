@@ -83,7 +83,6 @@
                                 <div class="mb-3">
                                     <label class="form-label"><strong>Jenis Kerusakan</strong> <span class="text-danger">*</span></label>
                                     <select class="form-select" id="jenisKerusakan" name="jenis_kerusakan" required>
-                                        <option value="">-- Pilih Jenis Kerusakan --</option>
                                         <option value="Masih Hidup">Masih Hidup</option>
                                         <option value="Mati Total">Mati Total</option>
                                     </select>
