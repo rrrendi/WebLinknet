@@ -250,50 +250,58 @@
         // Create AudioContext
         const audioContext = new(window.AudioContext || window.webkitAudioContext)();
 
-        // Create oscillator (sound generator)
+        // Single beep untuk berhasil
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
-        // Connect nodes
         oscillator.connect(gainNode);
         gainNode.connect(audioContext.destination);
 
-        // Configure sound (beep sound)
-        oscillator.type = 'sine'; // Type: sine, square, sawtooth, triangle
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime); // Frequency: 800 Hz (high pitch beep)
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(2000, audioContext.currentTime);
 
-        // Configure volume (0.0 to 1.0)
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime); // Volume: 30%
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2); // Fade out
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
 
-        // Play sound
         oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.2); // Duration: 0.2 seconds
+        oscillator.stop(audioContext.currentTime + 0.15);
     }
 
     function playScanErrorSound() {
         // Create AudioContext for error sound
         const audioContext = new(window.AudioContext || window.webkitAudioContext)();
 
-        // Create oscillator
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        // First beep (error sound)
+        const oscillator1 = audioContext.createOscillator();
+        const gainNode1 = audioContext.createGain();
 
-        // Connect nodes
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        oscillator1.connect(gainNode1);
+        gainNode1.connect(audioContext.destination);
 
-        // Configure sound (lower pitch for error)
-        oscillator.type = 'square'; // Square wave for harsh sound
-        oscillator.frequency.setValueAtTime(200, audioContext.currentTime); // Lower frequency for error
+        oscillator1.type = 'square';
+        oscillator1.frequency.setValueAtTime(300, audioContext.currentTime);
 
-        // Configure volume
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        gainNode1.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
 
-        // Play sound
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3); // Slightly longer for error
+        oscillator1.start(audioContext.currentTime);
+        oscillator1.stop(audioContext.currentTime + 0.15);
+
+        // Second beep (error sound) - langsung setelah beep pertama
+        const oscillator2 = audioContext.createOscillator();
+        const gainNode2 = audioContext.createGain();
+
+        oscillator2.connect(gainNode2);
+        gainNode2.connect(audioContext.destination);
+
+        oscillator2.type = 'square';
+        oscillator2.frequency.setValueAtTime(300, audioContext.currentTime + 0.15);
+
+        gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.15);
+        gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+        oscillator2.start(audioContext.currentTime + 0.15);
+        oscillator2.stop(audioContext.currentTime + 0.3);
     }
 
     // Alternative: Menggunakan HTML5 Audio dengan URL online (jika ingin suara lebih natural)
