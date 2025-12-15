@@ -32,10 +32,7 @@ class User extends Authenticatable
         ];
     }
 
-    // ============================================
-    // ROLE CHECKER METHODS - PASTIKAN ADA SEMUA!
-    // ============================================
-    
+    // ROLE METHODS
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
@@ -53,45 +50,23 @@ class User extends Authenticatable
 
     public function canDeleteActivity($activityUserId): bool
     {
-        // Admin bisa hapus semua
-        if ($this->isAdmin()) {
-            return true;
-        }
-        
-        // User biasa hanya bisa hapus milik sendiri
-        return $this->id == $activityUserId;
+        return $this->id === $activityUserId;
     }
 
-    // ============================================
     // SCOPES
-    // ============================================
-    
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeAdmins($query)
-    {
-        return $query->where('role', 'admin');
-    }
-
-    public function scopeRegularUsers($query)
-    {
-        return $query->where('role', 'user');
-    }
-
-    // ============================================
     // RELATIONSHIPS
-    // ============================================
-    
     public function igiScans()
     {
-        return $this->hasMany(IgiDetail::class, 'scan_by');
+        return $this->hasMany(\App\Models\IgiDetail::class, 'scan_by');
     }
 
     public function activities()
     {
-        return $this->hasMany(ActivityLog::class, 'user_id');
+        return $this->hasMany(\App\Models\ActivityLog::class, 'user_id');
     }
 }

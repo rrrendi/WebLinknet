@@ -53,6 +53,7 @@ class IgiController extends Controller
     {
         $request->validate([
             'pemilik' => 'required|in:Linknet,Telkomsel',
+            'tanggal_datang' => 'required|date',
             'no_ido' => 'required|unique:igi_bapb,no_ido',
             'wilayah' => 'required|string|max:100',
             'jumlah' => 'required|integer|min:1',
@@ -63,7 +64,7 @@ class IgiController extends Controller
 
         $bapb = IgiBapb::create([
             'pemilik' => $request->pemilik,
-            'tanggal_datang' => Carbon::now(),
+            'tanggal_datang' => $request->tanggal_datang,
             'no_ido' => $request->no_ido,
             'wilayah' => $request->wilayah,
             'jumlah' => $request->jumlah,
@@ -91,8 +92,8 @@ class IgiController extends Controller
     // API: Get Merk by Jenis
     public function getMerkByJenis($jenis)
     {
-        $merkList = MasterMerk::active()
-                              ->byJenis($jenis)
+        $merkList = MasterMerk::where('is_active', true)
+                              ->where('jenis', $jenis)
                               ->orderBy('merk')
                               ->get(['id', 'merk']);
 
@@ -102,7 +103,7 @@ class IgiController extends Controller
     // API: Get Type by Merk
     public function getTypeByMerk($merkId)
     {
-        $typeList = MasterType::active()
+        $typeList = MasterType::where('is_active', true)
                               ->where('merk_id', $merkId)
                               ->orderBy('type')
                               ->get(['id', 'type']);
@@ -120,7 +121,7 @@ class IgiController extends Controller
             'type' => 'required|string',
             'serial_number' => 'required|unique:igi_details,serial_number,NULL,id,deleted_at,NULL',
             'mac_address' => 'required|string',
-            'stb_id' => 'nullable|string', // Required jika jenis = STB
+            'stb_id' => 'nullable|string',
         ], [
             'serial_number.unique' => 'Serial Number sudah terdaftar!',
         ]);
@@ -145,7 +146,7 @@ class IgiController extends Controller
                 ], 422);
             }
 
-            // Create detail - PERBAIKAN: Gunakan Auth::id()
+            // Create detail
             $detail = IgiDetail::create([
                 'bapb_id' => $bapb->id,
                 'jenis' => $request->jenis,
@@ -155,14 +156,14 @@ class IgiController extends Controller
                 'mac_address' => $request->mac_address,
                 'stb_id' => $request->stb_id,
                 'scan_time' => Carbon::now(),
-                'scan_by' => Auth::id(),  // PERBAIKAN
+                'scan_by' => Auth::id(),
                 'status_proses' => 'IGI'
             ]);
 
             // Increment total_scan di BAPB
-            $bapb->incrementTotalScan();
+            $bapb->increment('total_scan');
 
-            // Log activity - PERBAIKAN: Gunakan Auth::id()
+            // Log activity
             $detail->logActivity('IGI', 'N/A', Auth::id(), 'Barang masuk ke IGI');
 
             DB::commit();
@@ -184,34 +185,67 @@ class IgiController extends Controller
         }
     }
 
-    // Edit BAPB Header
+    // Edit BAPB Header (SEMUA BISA DIEDIT)
     public function edit($id)
     {
         $bapb = IgiBapb::findOrFail($id);
         return view('igi.edit-bapb', compact('bapb'));
     }
 
-    // Update BAPB Header
+    // Update BAPB Header (SEMUA BISA DIUPDATE)
     public function update(Request $request, $id)
     {
         $bapb = IgiBapb::findOrFail($id);
 
         $request->validate([
             'pemilik' => 'required|in:Linknet,Telkomsel',
+            'tanggal_datang' => 'required|date',
+            'no_ido' => 'required|unique:igi_bapb,no_ido,' . $id,
             'wilayah' => 'required|string|max:100',
             'jumlah' => 'required|integer|min:' . $bapb->total_scan,
         ], [
+            'no_ido.unique' => 'No. IDO sudah terdaftar di sistem',
             'jumlah.min' => 'Jumlah tidak boleh kurang dari total yang sudah di-scan (' . $bapb->total_scan . ')',
         ]);
 
         $bapb->update([
             'pemilik' => $request->pemilik,
+            'tanggal_datang' => $request->tanggal_datang,
+            'no_ido' => $request->no_ido,
             'wilayah' => $request->wilayah,
             'jumlah' => $request->jumlah,
         ]);
 
         return redirect()->route('igi.index')
                          ->with('success', 'BAPB berhasil diperbarui');
+    }
+
+    // Delete BAPB Header (BARU)
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+        try {
+            $bapb = IgiBapb::findOrFail($id);
+
+            // Check jika ada detail yang sudah di-scan
+            if ($bapb->total_scan > 0) {
+                return redirect()->back()
+                    ->with('error', 'Tidak bisa hapus BAPB yang sudah memiliki detail barang. Hapus detail terlebih dahulu.');
+            }
+
+            // Hapus BAPB
+            $bapb->delete();
+
+            DB::commit();
+
+            return redirect()->route('igi.index')
+                             ->with('success', 'BAPB berhasil dihapus');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()
+                             ->with('error', 'Error: ' . $e->getMessage());
+        }
     }
 
     // Delete Detail (dikurangi dari total_scan)
@@ -234,13 +268,16 @@ class IgiController extends Controller
             $detail->delete();
 
             // Decrement total_scan
-            $bapb->decrementTotalScan();
+            if ($bapb->total_scan > 0) {
+                $bapb->decrement('total_scan');
+            }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Data berhasil dihapus'
+                'message' => 'Data berhasil dihapus',
+                'total_scan' => $bapb->fresh()->total_scan
             ]);
 
         } catch (\Exception $e) {

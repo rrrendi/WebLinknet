@@ -1,22 +1,23 @@
 <?php
+
 // app/Http/Controllers/ServiceHandlingController.php
 namespace App\Http\Controllers;
 
 use App\Models\{ServiceHandling, IgiDetail};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class ServiceHandlingController extends Controller
 {
     public function index()
     {
         $monitoring = $this->getMonitoring();
-        $recentService = ServiceHandling::with(['igiDetail.bapb', 'user'])
-            ->orderBy('service_time', 'desc')
-            ->paginate(20);
-        return view('service-handling.index', compact('monitoring', 'recentService'));
+        $services = ServiceHandling::with(['igiDetail.bapb', 'user'])
+                                     ->orderBy('service_time', 'desc')
+                                     ->paginate(20);
+        return view('service-handling.index', compact('monitoring', 'services'));
     }
 
     private function getMonitoring()
@@ -24,9 +25,9 @@ class ServiceHandlingController extends Controller
         $data = [];
         foreach (['Linknet', 'Telkomsel'] as $pemilik) {
             foreach (['STB', 'ONT', 'ROUTER'] as $jenis) {
-                $count = ServiceHandling::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
+                $count = ServiceHandling::whereHas('igiDetail', function($q) use ($pemilik, $jenis) {
                     $q->whereHas('bapb', fn($q2) => $q2->where('pemilik', $pemilik))
-                        ->where('jenis', $jenis);
+                      ->where('jenis', $jenis);
                 })->count();
                 $data[$pemilik][$jenis] = $count;
             }
@@ -55,7 +56,7 @@ class ServiceHandlingController extends Controller
         DB::beginTransaction();
         try {
             $detail = IgiDetail::findOrFail($request->igi_detail_id);
-
+            
             $service = ServiceHandling::create([
                 'igi_detail_id' => $detail->id,
                 'service_time' => Carbon::now(),
@@ -67,34 +68,23 @@ class ServiceHandlingController extends Controller
             $detail->logActivity('SERVICE_HANDLING', 'NOK', Auth::id());
 
             DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => 'Service Handling berhasil!',
-                'data' => $service->load(['igiDetail.bapb', 'user'])
-            ]);
+            return response()->json(['success' => true, 'message' => 'Service Handling berhasil!', 
+                                     'data' => $service->load(['igiDetail.bapb', 'user'])]);
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         DB::beginTransaction();
         try {
+            $user = $request->user();
             $service = ServiceHandling::with('igiDetail')->findOrFail($id);
-
-            $currentUser = Auth::user();
-
-            // Cek: Admin bisa hapus semua, user biasa hanya milik sendiri
-            $isAdmin = ($currentUser->role === 'admin');
-            $isOwner = ($service->user_id == $currentUser->id);
-
-            if (!$isAdmin && !$isOwner) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Anda tidak memiliki akses untuk menghapus data ini.'
-                ], 403);
+            
+            if (!$user || !$user->canDeleteActivity($service->user_id)) {
+                return response()->json(['success' => false, 'message' => 'Tidak ada izin!'], 403);
             }
 
             $service->delete();

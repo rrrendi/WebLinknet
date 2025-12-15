@@ -7,18 +7,18 @@ use App\Models\Repair;
 use App\Models\IgiDetail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class RepairController extends Controller
 {
     public function index()
     {
         $monitoring = $this->getMonitoringData();
-
+        
         $recentRepairs = Repair::with(['igiDetail.bapb', 'user'])
-            ->orderBy('repair_time', 'desc')
-            ->paginate(20);
+                               ->orderBy('repair_time', 'desc')
+                               ->paginate(20);
 
         return view('repair.index', compact('monitoring', 'recentRepairs'));
     }
@@ -31,14 +31,14 @@ class RepairController extends Controller
 
         foreach ($pemilikList as $pemilik) {
             foreach ($jenisList as $jenis) {
-                $ok = Repair::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
-                    $q->whereHas('bapb', function ($q2) use ($pemilik) {
+                $ok = Repair::whereHas('igiDetail', function($q) use ($pemilik, $jenis) {
+                    $q->whereHas('bapb', function($q2) use ($pemilik) {
                         $q2->where('pemilik', $pemilik);
                     })->where('jenis', $jenis);
                 })->where('result', 'OK')->count();
 
-                $nok = Repair::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
-                    $q->whereHas('bapb', function ($q2) use ($pemilik) {
+                $nok = Repair::whereHas('igiDetail', function($q) use ($pemilik, $jenis) {
+                    $q->whereHas('bapb', function($q2) use ($pemilik) {
                         $q2->where('pemilik', $pemilik);
                     })->where('jenis', $jenis);
                 })->where('result', 'NOK')->count();
@@ -125,12 +125,8 @@ class RepairController extends Controller
             ]);
 
             $detail->updateStatusProses('REPAIR');
-            $detail->logActivity(
-                'REPAIR',
-                $request->result,
-                Auth::id(),
-                'Jenis Kerusakan: ' . $request->jenis_kerusakan
-            );
+            $detail->logActivity('REPAIR', $request->result, Auth::id(), 
+                                 'Jenis Kerusakan: ' . $request->jenis_kerusakan);
 
             DB::commit();
 
@@ -139,6 +135,7 @@ class RepairController extends Controller
                 'message' => 'Repair berhasil disimpan!',
                 'data' => $repair->load(['igiDetail.bapb', 'user'])
             ]);
+
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
@@ -148,23 +145,18 @@ class RepairController extends Controller
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         DB::beginTransaction();
         try {
+            $user = $request->user();
             $repair = Repair::with('igiDetail')->findOrFail($id);
             $detail = $repair->igiDetail;
 
-            $currentUser = Auth::user();
-
-            // Cek: Admin bisa hapus semua, user biasa hanya milik sendiri
-            $isAdmin = ($currentUser->role === 'admin');
-            $isOwner = ($repair->user_id == $currentUser->id);
-
-            if (!$isAdmin && !$isOwner) {
+            if (!$user || !$user->canDeleteActivity($repair->user_id)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Anda tidak memiliki akses untuk menghapus data ini.'
+                    'message' => 'Anda tidak memiliki izin untuk menghapus aktivitas ini!'
                 ], 403);
             }
 
@@ -185,6 +177,7 @@ class RepairController extends Controller
                 'success' => true,
                 'message' => 'Data Repair berhasil dihapus!'
             ]);
+
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([

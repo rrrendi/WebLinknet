@@ -204,7 +204,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="serviceTableBody">
-                                        @forelse($recentService as $scan)
+                                        @forelse($services as $scan)
                                         <tr id="service-row-{{ $scan->id }}">
                                             <td>{{ $scan->waktu_service->format('d-m-Y H:i:s') }}</td>
                                             <td><code>{{ $scan->igi->serial_number }}</code></td>
@@ -231,7 +231,7 @@
                                 </table>
                             </div>
                             <div class="d-flex justify-content-center mt-3">
-                                {{ $recentService->links('pagination::bootstrap-5') }}
+                                {{ $services->links('pagination::bootstrap-5') }}
                             </div>
                         </div>
                     </div>

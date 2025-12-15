@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/UserManagementController.php
 
 namespace App\Http\Controllers;
 
@@ -10,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 
 class UserManagementController extends Controller
 {
+
     public function index()
     {
         $users = User::orderBy('created_at', 'desc')->paginate(20);
@@ -38,8 +38,7 @@ class UserManagementController extends Controller
             'is_active' => true
         ]);
 
-        return redirect()->route('users.index')
-            ->with('success', 'User berhasil dibuat!');
+        return redirect()->route('users.index')->with('success', 'User berhasil dibuat!');
     }
 
     public function edit($id)
@@ -73,23 +72,19 @@ class UserManagementController extends Controller
 
         $user->update($data);
 
-        return redirect()->route('users.index')
-            ->with('success', 'User berhasil diperbarui!');
+        return redirect()->route('users.index')->with('success', 'User berhasil diperbarui!');
     }
 
     public function destroy($id)
     {
         $user = User::findOrFail($id);
 
-        // Tidak bisa hapus diri sendiri - PERBAIKAN
-        if ($user->id == Auth::id()) {
-            return redirect()->back()
-                ->with('error', 'Tidak bisa menghapus akun sendiri!');
+        // Tidak bisa hapus diri sendiri
+        if ($user->id === Auth::id()) {
+            return redirect()->back()->with('error', 'Tidak bisa menghapus akun sendiri!');
         }
 
         $user->delete();
-        
-        return redirect()->route('users.index')
-            ->with('success', 'User berhasil dihapus!');
+        return redirect()->route('users.index')->with('success', 'User berhasil dihapus!');
     }
 }

@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Auth;
 
 class IgiDetail extends Model
 {
@@ -115,7 +116,7 @@ class IgiDetail extends Model
             'aktivitas' => $aktivitas,
             'tanggal' => now(),
             'result' => $result,
-            'user_id' => $userId ?? auth()->id(),
+            'user_id' => $userId ?? Auth::id(),
             'keterangan' => $keterangan
         ]);
     }

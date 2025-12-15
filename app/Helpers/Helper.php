@@ -214,7 +214,7 @@ class Helper
     public static function generateNoDO()
     {
         $date = date('Ymd');
-        $lastDO = \App\Models\Igi::whereDate('created_at', today())
+        $lastDO = \App\Models\IgiDetail::whereDate('created_at', today())
             ->count();
         
         $number = str_pad($lastDO + 1, 4, '0', STR_PAD_LEFT);

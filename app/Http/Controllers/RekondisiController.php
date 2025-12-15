@@ -5,18 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\{Rekondisi, IgiDetail};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class RekondisiController extends Controller
 {
     public function index()
     {
         $monitoring = $this->getMonitoring();
-        $recentRekondisi  = Rekondisi::with(['igiDetail.bapb', 'user'])
-            ->orderBy('rekondisi_time', 'desc')
-            ->paginate(20);
-        return view('rekondisi.index', compact('monitoring', 'recentRekondisi '));
+        $recentRekondisi = Rekondisi::with(['igiDetail.bapb', 'user'])
+                                ->orderBy('rekondisi_time', 'desc')
+                                ->paginate(20);
+        return view('rekondisi.index', compact('monitoring', 'recentRekondisi'));
     }
 
     private function getMonitoring()
@@ -24,9 +24,9 @@ class RekondisiController extends Controller
         $data = [];
         foreach (['Linknet', 'Telkomsel'] as $pemilik) {
             foreach (['STB', 'ONT', 'ROUTER'] as $jenis) {
-                $count = Rekondisi::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
+                $count = Rekondisi::whereHas('igiDetail', function($q) use ($pemilik, $jenis) {
                     $q->whereHas('bapb', fn($q2) => $q2->where('pemilik', $pemilik))
-                        ->where('jenis', $jenis);
+                      ->where('jenis', $jenis);
                 })->count();
                 $data[$pemilik][$jenis] = $count;
             }
@@ -44,13 +44,11 @@ class RekondisiController extends Controller
 
         // Harus dari Uji Fungsi OK atau Repair OK
         $hasOkResult = $detail->ujiFungsi()->where('result', 'OK')->exists() ||
-            $detail->repair()->where('result', 'OK')->exists();
+                       $detail->repair()->where('result', 'OK')->exists();
 
         if (!$hasOkResult) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Rekondisi hanya untuk barang dengan result OK!'
-            ], 400);
+            return response()->json(['success' => false, 
+                'message' => 'Rekondisi hanya untuk barang dengan result OK!'], 400);
         }
 
         return response()->json(['success' => true, 'data' => [
@@ -67,7 +65,7 @@ class RekondisiController extends Controller
         DB::beginTransaction();
         try {
             $detail = IgiDetail::findOrFail($request->igi_detail_id);
-
+            
             $rekondisi = Rekondisi::create([
                 'igi_detail_id' => $detail->id,
                 'rekondisi_time' => Carbon::now(),
@@ -78,40 +76,27 @@ class RekondisiController extends Controller
             $detail->logActivity('REKONDISI', 'N/A', Auth::id());
 
             DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => 'Rekondisi berhasil!',
-                'data' => $rekondisi->load(['igiDetail.bapb', 'user'])
-            ]);
+            return response()->json(['success' => true, 'message' => 'Rekondisi berhasil!', 
+                                     'data' => $rekondisi->load(['igiDetail.bapb', 'user'])]);
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         DB::beginTransaction();
         try {
+            $user = $request->user();
             $rekondisi = Rekondisi::with('igiDetail')->findOrFail($id);
-
-            $currentUser = Auth::user();
-
-            // Cek: Admin bisa hapus semua, user biasa hanya milik sendiri
-            $isAdmin = ($currentUser->role === 'admin');
-            $isOwner = ($rekondisi->user_id == $currentUser->id);
-
-            if (!$isAdmin && !$isOwner) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Anda tidak memiliki akses untuk menghapus data ini.'
-                ], 403);
+            
+            if (!$user || !$user->canDeleteActivity($rekondisi->user_id)) {
+                return response()->json(['success' => false, 'message' => 'Tidak ada izin!'], 403);
             }
 
-            if (
-                $rekondisi->igiDetail->serviceHandling()->exists() ||
-                $rekondisi->igiDetail->packing()->exists()
-            ) {
+            if ($rekondisi->igiDetail->serviceHandling()->exists() || 
+                $rekondisi->igiDetail->packing()->exists()) {
                 return response()->json(['success' => false, 'message' => 'Ada proses lanjutan!'], 403);
             }
 

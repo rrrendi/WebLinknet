@@ -5,8 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\{Packing, IgiDetail};
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
+
 
 class PackingController extends Controller
 {
@@ -14,8 +15,8 @@ class PackingController extends Controller
     {
         $monitoring = $this->getMonitoring();
         $recentPacking = Packing::with(['igiDetail.bapb', 'user'])
-            ->orderBy('packing_time', 'desc')
-            ->paginate(20);
+                             ->orderBy('packing_time', 'desc')
+                             ->paginate(20);
         return view('packing.index', compact('monitoring', 'recentPacking'));
     }
 
@@ -24,9 +25,9 @@ class PackingController extends Controller
         $data = [];
         foreach (['Linknet', 'Telkomsel'] as $pemilik) {
             foreach (['STB', 'ONT', 'ROUTER'] as $jenis) {
-                $count = Packing::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
+                $count = Packing::whereHas('igiDetail', function($q) use ($pemilik, $jenis) {
                     $q->whereHas('bapb', fn($q2) => $q2->where('pemilik', $pemilik))
-                        ->where('jenis', $jenis);
+                      ->where('jenis', $jenis);
                 })->count();
                 $data[$pemilik][$jenis] = $count;
             }
@@ -44,10 +45,8 @@ class PackingController extends Controller
 
         // Harus sudah rekondisi
         if (!$detail->rekondisi()->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Packing hanya untuk barang yang sudah Rekondisi!'
-            ], 400);
+            return response()->json(['success' => false, 
+                'message' => 'Packing hanya untuk barang yang sudah Rekondisi!'], 400);
         }
 
         return response()->json(['success' => true, 'data' => [
@@ -64,7 +63,7 @@ class PackingController extends Controller
         DB::beginTransaction();
         try {
             $detail = IgiDetail::findOrFail($request->igi_detail_id);
-
+            
             $packing = Packing::create([
                 'igi_detail_id' => $detail->id,
                 'packing_time' => Carbon::now(),
@@ -77,40 +76,34 @@ class PackingController extends Controller
             $detail->logActivity('PACKING', 'N/A', Auth::id());
 
             DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => 'Packing berhasil!',
-                'data' => $packing->load(['igiDetail.bapb', 'user'])
-            ]);
+            return response()->json(['success' => true, 'message' => 'Packing berhasil!', 
+                                     'data' => $packing->load(['igiDetail.bapb', 'user'])]);
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
-        $packing = Packing::findOrFail($id);
+        DB::beginTransaction();
+        try {
+            $user = $request->user();
+            $packing = Packing::with('igiDetail')->findOrFail($id);
+            
+            if (!$user || !$user->canDeleteActivity($packing->user_id)) {
+                return response()->json(['success' => false, 'message' => 'Tidak ada izin!'], 403);
+            }
 
-        // Ambil user yang sedang login
-        $currentUser = Auth::user();
+            $packing->delete();
+            $packing->igiDetail->updateStatusProses('REKONDISI');
+            $packing->igiDetail->activityLogs()->where('aktivitas', 'PACKING')->delete();
 
-        // Cek: Admin bisa hapus semua, user biasa hanya milik sendiri
-        $isAdmin = ($currentUser->role === 'admin');
-        $isOwner = ($packing->user_id == $currentUser->id);
-
-        if (!$isAdmin && !$isOwner) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Anda tidak memiliki akses untuk menghapus data ini.'
-            ], 403);
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Berhasil dihapus!']);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
-
-        $packing->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Data berhasil dihapus'
-        ]);
     }
 }

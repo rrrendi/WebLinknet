@@ -7,6 +7,7 @@ use App\Models\IgiDetail;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class KoreksiBarcodeController extends Controller
 {
@@ -51,15 +52,15 @@ class KoreksiBarcodeController extends Controller
     }
 
     // Get Activity History
-    public function getActivityHistory($id)
+    public function getActivityHistory(Request $request, $id)
     {
         $detail = IgiDetail::findOrFail($id);
-        
+        $user = $request->user();
         $activities = $detail->activityLogs()
                              ->with('user')
                              ->orderBy('tanggal', 'desc')
                              ->get()
-                             ->map(function($activity) {
+                             ->map(function($activity) use ($user) {
                                  return [
                                      'id' => $activity->id,
                                      'aktivitas' => $activity->aktivitas,
@@ -67,7 +68,7 @@ class KoreksiBarcodeController extends Controller
                                      'result' => $activity->result,
                                      'user_name' => $activity->user->name,
                                      'user_id' => $activity->user_id,
-                                     'can_delete' => auth()->user()->canDeleteActivity($activity->user_id),
+                                     'can_delete' => $user?->canDeleteActivity($activity->user_id) ?? false,
                                      'keterangan' => $activity->keterangan
                                  ];
                              });
@@ -127,7 +128,7 @@ class KoreksiBarcodeController extends Controller
                 'aktivitas' => 'KOREKSI',
                 'tanggal' => now(),
                 'result' => 'N/A',
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'keterangan' => 'Koreksi data barang',
                 'data_lama' => $dataLama,
                 'data_baru' => $dataBaru
@@ -150,14 +151,15 @@ class KoreksiBarcodeController extends Controller
     }
 
     // Delete Activity (hanya yang membuat)
-    public function deleteActivity($id)
+    public function deleteActivity(Request $request, $id)
     {
         DB::beginTransaction();
         try {
+            $user = $request->user();
             $activity = ActivityLog::with('igiDetail')->findOrFail($id);
 
             // Check permission
-            if (!auth()->user()->canDeleteActivity($activity->user_id)) {
+            if (!$user || !$user->canDeleteActivity($activity->user_id)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Anda tidak memiliki izin untuk menghapus aktivitas ini!'

@@ -90,6 +90,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/check-serial', [ServiceHandlingController::class, 'checkSerial'])->name('check-serial');
         Route::post('/store', [ServiceHandlingController::class, 'store'])->name('store');
         Route::delete('/{id}', [ServiceHandlingController::class, 'destroy'])->name('destroy');
+        Route::get('/nok-data', [ServiceHandlingController::class, 'nokData'])->name('nok-data');
     });
 
     // ==========================================

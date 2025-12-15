@@ -1,5 +1,5 @@
 {{-- ================================================================ --}}
-{{-- resources/views/repair/index.blade.php --}}
+{{-- resources/views/repair/index.blade.php --}} 
 {{-- ================================================================ --}}
 @extends('layouts.app')
 @section('title', 'Repair')
@@ -13,7 +13,7 @@
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#scanning">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#scanning" id="tabScanning">
                 <i class="bi bi-upc-scan"></i> Actual Scanning
             </button>
         </li>
@@ -65,8 +65,9 @@
                         </div>
                         <div class="card-body">
                             <form id="RepairForm">
+                                {{-- System Test Result --}}
                                 <div class="mb-3">
-                                    <label class="form-label">System Test Result</label>
+                                    <label class="form-label"><strong>System Test Result</strong></label>
                                     <div>
                                         <div class="form-check form-check-inline">
                                             <input class="form-check-input" type="radio" name="result" value="OK" id="resultOK" checked>
@@ -82,24 +83,37 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                {{-- Jenis Kerusakan --}}
                                 <div class="mb-3">
-                                    <label class="form-label">Scan Barcode</label>
-                                    <input type="text" id="serialNumberUji" class="form-control form-control-lg" 
+                                    <label class="form-label"><strong>Jenis Kerusakan</strong></label>
+                                    <select class="form-select" id="jenisKerusakan" name="jenis_kerusakan" required>
+                                        <option value="">-- Pilih Jenis Kerusakan --</option>
+                                        <option value="Rusak Fisik">Rusak Fisik</option>
+                                        <option value="Tidak Menyala">Tidak Menyala</option>
+                                        <option value="Port Rusak">Port Rusak</option>
+                                        <option value="WiFi Bermasalah">WiFi Bermasalah</option>
+                                        <option value="Tidak Terdeteksi">Tidak Terdeteksi</option>
+                                        <option value="Mati Total">Mati Total</option>
+                                        <option value="Hang/Freeze">Hang/Freeze</option>
+                                        <option value="Kabel Putus">Kabel Putus</option>
+                                        <option value="Adaptor Rusak">Adaptor Rusak</option>
+                                        <option value="Lainnya">Lainnya</option>
+                                    </select>
+                                </div>
+
+                                {{-- Scan Barcode --}}
+                                <div class="mb-3">
+                                    <label class="form-label"><strong>Scan Barcode</strong></label>
+                                    <input type="text" id="serialNumberRepair" class="form-control form-control-lg" 
                                            placeholder="Scan Serial Number" autofocus autocomplete="off">
                                     <small class="text-muted">Tekan Enter setelah scan</small>
-                                </div>
-                                <div id="autoFillUji" style="display: none;">
-                                    <input type="hidden" id="igiDetailIdUji">
-                                    <div class="alert alert-info">
-                                        <div><strong>Jenis:</strong> <span id="jenisUji"></span></div>
-                                        <div><strong>Merk:</strong> <span id="merkUji"></span></div>
-                                        <div><strong>Type:</strong> <span id="typeUji"></span></div>
-                                    </div>
                                 </div>
                             </form>
                         </div>
                     </div>
                 </div>
+
                 <div class="col-md-8">
                     <div class="card">
                         <div class="card-header">
@@ -109,19 +123,28 @@
                             <div class="table-responsive">
                                 <table class="table table-striped table-hover">
                                     <thead class="table-dark">
-                                        <tr><th>Uji Time</th><th>Serial Number</th><th>Jenis</th><th>Result</th><th>User</th><th>Aksi</th></tr>
+                                        <tr>
+                                            <th>Repair Time</th>
+                                            <th>Serial Number</th>
+                                            <th>Jenis</th>
+                                            <th>Kerusakan</th>
+                                            <th>Result</th>
+                                            <th>User</th>
+                                            <th>Aksi</th>
+                                        </tr>
                                     </thead>
                                     <tbody id="RepairTableBody">
-                                        @foreach($recentRepairs as $test)
-                                        <tr id="uji-row-{{ $test->id }}">
-                                            <td>{{ $test->uji_fungsi_time->format('d-m-Y H:i:s') }}</td>
-                                            <td><code>{{ $test->igiDetail->serial_number }}</code></td>
-                                            <td>{{ $test->igiDetail->jenis }}</td>
-                                            <td><span class="badge badge-{{ $test->result === 'OK' ? 'ok' : 'nok' }}">{{ $test->result }}</span></td>
-                                            <td>{{ $test->user->name }}</td>
+                                        @foreach($recentRepairs as $repair)
+                                        <tr id="repair-row-{{ $repair->id }}">
+                                            <td>{{ $repair->repair_time->format('d-m-Y H:i:s') }}</td>
+                                            <td><code>{{ $repair->igiDetail->serial_number }}</code></td>
+                                            <td>{{ $repair->igiDetail->jenis }}</td>
+                                            <td><span class="badge bg-warning text-dark">{{ $repair->jenis_kerusakan }}</span></td>
+                                            <td><span class="badge badge-{{ $repair->result === 'OK' ? 'ok' : 'nok' }}">{{ $repair->result }}</span></td>
+                                            <td>{{ $repair->user->name }}</td>
                                             <td>
-                                                @if(auth()->user()->canDeleteActivity($test->user_id))
-                                                <button class="btn btn-sm btn-danger btn-delete-uji" data-id="{{ $test->id }}">
+                                                @if(auth()->user()->canDeleteActivity($repair->user_id))
+                                                <button class="btn btn-sm btn-danger btn-delete-repair" data-id="{{ $repair->id }}">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                                 @endif
@@ -145,84 +168,119 @@
 $(document).ready(function() {
     let igiDetailId = null;
     
-    $('#serialNumberUji').on('keypress', function(e) {
+    // AUTOFOCUS saat pertama load
+    $('#serialNumberRepair').focus();
+    
+    // AUTOFOCUS saat pindah ke tab scanning
+    $('#tabScanning').on('shown.bs.tab', function() {
+        $('#serialNumberRepair').focus();
+    });
+    
+    // LANGSUNG SUBMIT saat Enter (tanpa preview)
+    $('#serialNumberRepair').on('keypress', function(e) {
         if (e.which === 13) {
             e.preventDefault();
-            checkSerial();
+            checkAndSubmit();
         }
     });
     
-    function checkSerial() {
-        const serialNumber = $('#serialNumberUji').val().trim();
+    // Fungsi check serial dan langsung submit
+    function checkAndSubmit() {
+        const serialNumber = $('#serialNumberRepair').val().trim();
         const result = $('input[name="result"]:checked').val();
+        const jenisKerusakan = $('#jenisKerusakan').val();
         
-        if (!serialNumber) return;
+        if (!serialNumber) {
+            alert('Serial number tidak boleh kosong!');
+            return;
+        }
         
+        if (!jenisKerusakan) {
+            alert('Pilih jenis kerusakan terlebih dahulu!');
+            $('#jenisKerusakan').focus();
+            return;
+        }
+        
+        // Check serial number
         $.ajax({
-            url: '{{ route("uji-fungsi.check-serial") }}',
+            url: '{{ route("repair.check-serial") }}',
             method: 'POST',
-            data: { serial_number: serialNumber, result: result },
+            data: { serial_number: serialNumber },
             success: function(response) {
                 igiDetailId = response.data.id;
-                $('#igiDetailIdUji').val(igiDetailId);
-                $('#jenisUji').text(response.data.jenis);
-                $('#merkUji').text(response.data.merk);
-                $('#typeUji').text(response.data.type);
-                $('#autoFillUji').slideDown();
+                // Langsung submit repair
                 submitRepair();
             },
             error: function(xhr) {
-                alert(xhr.responseJSON?.message || 'Error!');
-                $('#serialNumberUji').val('').focus();
-                $('#autoFillUji').hide();
+                alert(xhr.responseJSON?.message || 'Error validasi serial number!');
+                $('#serialNumberRepair').val('').focus();
             }
         });
     }
     
+    // Fungsi submit repair
     function submitRepair() {
         const result = $('input[name="result"]:checked').val();
+        const jenisKerusakan = $('#jenisKerusakan').val();
         
         $.ajax({
-            url: '{{ route("uji-fungsi.store") }}',
+            url: '{{ route("repair.store") }}',
             method: 'POST',
-            data: { igi_detail_id: igiDetailId, result: result },
+            data: { 
+                igi_detail_id: igiDetailId, 
+                result: result,
+                jenis_kerusakan: jenisKerusakan
+            },
             success: function(response) {
                 const data = response.data;
                 const badge = data.result === 'OK' ? 'badge-ok' : 'badge-nok';
+                const deleteBtn = data.can_delete ? `
+                    <button class="btn btn-sm btn-danger btn-delete-repair" data-id="${data.id}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                ` : '';
+                
                 const row = `
-                    <tr id="uji-row-${data.id}">
-                        <td>${new Date(data.uji_fungsi_time).toLocaleString('id-ID')}</td>
-                        <td><code>${data.igiDetail.serial_number}</code></td>
-                        <td>${data.igiDetail.jenis}</td>
+                    <tr id="repair-row-${data.id}">
+                        <td>${new Date(data.repair_time).toLocaleString('id-ID')}</td>
+                        <td><code>${data.serial_number}</code></td>
+                        <td>${data.jenis}</td>
+                        <td><span class="badge bg-warning text-dark">${data.jenis_kerusakan}</span></td>
                         <td><span class="badge ${badge}">${data.result}</span></td>
-                        <td>${data.user.name}</td>
-                        <td>
-                            <button class="btn btn-sm btn-danger btn-delete-uji" data-id="${data.id}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </td>
+                        <td>${data.user_name}</td>
+                        <td>${deleteBtn}</td>
                     </tr>
                 `;
+                
                 $('#RepairTableBody').prepend(row);
-                $('#serialNumberUji').val('').focus();
-                $('#autoFillUji').hide();
+                
+                // Clear input dan focus kembali
+                $('#serialNumberRepair').val('').focus();
             },
             error: function(xhr) {
-                alert(xhr.responseJSON?.message || 'Error!');
+                alert(xhr.responseJSON?.message || 'Error menyimpan data repair!');
+                $('#serialNumberRepair').val('').focus();
             }
         });
     }
     
-    $(document).on('click', '.btn-delete-uji', function() {
+    // Delete handler
+    $(document).on('click', '.btn-delete-repair', function() {
         const id = $(this).data('id');
-        if (!confirm('Yakin hapus?')) return;
+        if (!confirm('Yakin ingin menghapus data repair ini?')) return;
         
         $.ajax({
-            url: `/uji-fungsi/${id}`,
+            url: `/repair/${id}`,
             method: 'DELETE',
             success: function(response) {
-                $(`#uji-row-${id}`).fadeOut(300, function() { $(this).remove(); });
+                $(`#repair-row-${id}`).fadeOut(300, function() { 
+                    $(this).remove(); 
+                });
                 alert(response.message);
+                $('#serialNumberRepair').focus();
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Error menghapus data!');
             }
         });
     });

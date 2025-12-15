@@ -1,8 +1,16 @@
 <?php
 // app/Http/Controllers/DashboardController.php
+
 namespace App\Http\Controllers;
 
-use App\Models\{IgiBapb, IgiDetail, UjiFungsi, Repair, Rekondisi, ServiceHandling, Packing};
+use App\Models\IgiBapb;
+use App\Models\IgiDetail;
+use App\Models\UjiFungsi;
+use App\Models\Repair;
+use App\Models\Rekondisi;
+use App\Models\ServiceHandling;
+use App\Models\Packing;
+use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
@@ -36,7 +44,9 @@ class DashboardController extends Controller
         foreach ($jenisList as $jenis) {
             $chartData[$jenis] = [
                 'total' => IgiDetail::where('jenis', $jenis)->count(),
-                'packing' => IgiDetail::where('jenis', $jenis)->where('status_proses', 'PACKING')->count(),
+                'packing' => IgiDetail::where('jenis', $jenis)
+                                      ->where('status_proses', 'PACKING')
+                                      ->count(),
             ];
         }
 

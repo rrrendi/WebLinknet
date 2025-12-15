@@ -1,4 +1,6 @@
+{{-- ================================================================ --}}
 {{-- resources/views/igi/create-bapb.blade.php --}}
+{{-- ================================================================ --}}
 @extends('layouts.app')
 
 @section('title', 'Tambah BAPB Baru')
@@ -28,33 +30,36 @@
                             </div>
                             
                             <div class="col-md-6 mb-3">
+                                <label class="form-label">Tanggal Datang <span class="text-danger">*</span></label>
+                                <input type="date" name="tanggal_datang" 
+                                       class="form-control @error('tanggal_datang') is-invalid @enderror" 
+                                       value="{{ old('tanggal_datang', date('Y-m-d')) }}" required>
+                                @error('tanggal_datang')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label">No. IDO <span class="text-danger">*</span></label>
                                 <input type="text" name="no_ido" class="form-control @error('no_ido') is-invalid @enderror" 
                                        value="{{ old('no_ido') }}" required placeholder="Contoh: IDO-2025-001">
                                 @error('no_ido')<div class="invalid-feedback">{{ $message }}</div>@enderror
                                 <small class="text-muted">No. IDO harus unik</small>
                             </div>
-                        </div>
-                        
-                        <div class="row">
+                            
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Wilayah <span class="text-danger">*</span></label>
                                 <input type="text" name="wilayah" class="form-control @error('wilayah') is-invalid @enderror" 
                                        value="{{ old('wilayah') }}" required placeholder="Contoh: Bandung">
                                 @error('wilayah')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Jumlah Barang <span class="text-danger">*</span></label>
-                                <input type="number" name="jumlah" class="form-control @error('jumlah') is-invalid @enderror" 
-                                       value="{{ old('jumlah', 1) }}" required min="1" placeholder="Jumlah total barang">
-                                @error('jumlah')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                            </div>
                         </div>
                         
-                        <div class="alert alert-info">
-                            <i class="bi bi-info-circle"></i> 
-                            <strong>Info:</strong> Tanggal datang akan otomatis diisi dengan tanggal hari ini.
+                        <div class="mb-3">
+                            <label class="form-label">Jumlah Barang <span class="text-danger">*</span></label>
+                            <input type="number" name="jumlah" class="form-control @error('jumlah') is-invalid @enderror" 
+                                   value="{{ old('jumlah', 1) }}" required min="1" placeholder="Jumlah total barang">
+                            @error('jumlah')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
                         
                         <div class="d-flex gap-2">

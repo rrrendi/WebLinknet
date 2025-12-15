@@ -1,4 +1,7 @@
+{{-- ================================================================ --}}
 {{-- resources/views/igi/edit-bapb.blade.php --}}
+{{-- SEMUA FIELD BISA DIEDIT --}}
+{{-- ================================================================ --}}
 @extends('layouts.app')
 
 @section('title', 'Edit BAPB')
@@ -14,22 +17,9 @@
                 </div>
                 <div class="card-body">
                     <!-- Info Read Only -->
-                    <div class="card bg-light mb-3">
-                        <div class="card-body">
-                            <h6 class="text-muted">Data yang Tidak Dapat Diubah:</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-2">
-                                    <strong>No. IDO:</strong> <code>{{ $bapb->no_ido }}</code>
-                                </div>
-                                <div class="col-md-6 mb-2">
-                                    <strong>Tanggal Datang:</strong> {{ $bapb->tanggal_datang->format('d-m-Y') }}
-                                </div>
-                                <div class="col-md-6 mb-0">
-                                    <strong>Total Scan:</strong> 
-                                    <span class="badge bg-success">{{ $bapb->total_scan }}</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>Info:</strong> Total Scan saat ini: <strong>{{ $bapb->total_scan }}</strong>
                     </div>
                     
                     <form action="{{ route('igi.update', $bapb->id) }}" method="POST">
@@ -44,6 +34,23 @@
                                     <option value="Telkomsel" {{ $bapb->pemilik === 'Telkomsel' ? 'selected' : '' }}>Telkomsel</option>
                                 </select>
                                 @error('pemilik')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tanggal Datang <span class="text-danger">*</span></label>
+                                <input type="date" name="tanggal_datang" 
+                                       class="form-control @error('tanggal_datang') is-invalid @enderror" 
+                                       value="{{ old('tanggal_datang', $bapb->tanggal_datang->format('Y-m-d')) }}" required>
+                                @error('tanggal_datang')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">No. IDO <span class="text-danger">*</span></label>
+                                <input type="text" name="no_ido" class="form-control @error('no_ido') is-invalid @enderror" 
+                                       value="{{ old('no_ido', $bapb->no_ido) }}" required>
+                                @error('no_ido')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             
                             <div class="col-md-6 mb-3">

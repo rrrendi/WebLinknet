@@ -3,8 +3,6 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\CheckActiveUser;
-use App\Http\Middleware\CheckAdminRole;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -13,10 +11,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Registrasi middleware alias
         $middleware->alias([
-            'active' => CheckActiveUser::class,
-            'admin' => CheckAdminRole::class,
+            'active' => \App\Http\Middleware\CheckActiveUser::class,
+            'admin' => \App\Http\Middleware\CheckAdminRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

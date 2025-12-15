@@ -99,20 +99,12 @@
                     @if (Route::has('register'))
                         <div class="text-center pt-4 border-t border-slate-800">
                             <p class="text-sm text-slate-400">
-                                Don't have an account?
-                                <a href="{{ route('register') }}" class="text-blue-400 hover:text-blue-300 font-medium transition ml-1">
-                                    Create account
-                                </a>
+                                © 2025 Linknet. All rights reserved.
                             </p>
                         </div>
                     @endif
                 </form>
             </div>
-
-            <!-- Footer -->
-            <p class="text-center text-slate-500 text-xs mt-8">
-                © 2025 Linknet. All rights reserved.
-            </p>
         </div>
     </div>
 </body>

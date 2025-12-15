@@ -1,3 +1,6 @@
+{{-- ================================================================ --}}
+{{-- resources/views/igi/index.blade.php --}}
+{{-- ================================================================ --}}
 @extends('layouts.app')
 
 @section('title', 'IGI - Incoming Goods Inspection')
@@ -7,7 +10,7 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-inbox"></i> Daftar BAPB (Berita Acara Penerimaan Barang)</h5>
+            <h5 class="mb-0"><i class="bi bi-inbox"></i> Daftar BAPB</h5>
             <a href="{{ route('igi.create') }}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Tambah BAPB Baru
             </a>
@@ -57,12 +60,6 @@
                 </div>
             </form>
             
-            <!-- Info Alert -->
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> 
-                <strong>Informasi:</strong> Klik <strong>"Scan"</strong> atau angka pada kolom <strong>"Total Scan"</strong> untuk melanjutkan scan barang.
-            </div>
-            
             <!-- Table -->
             <div class="table-responsive">
                 <table class="table table-hover table-striped align-middle">
@@ -76,7 +73,7 @@
                             <th>Total BAPB</th>
                             <th>Total Scan</th>
                             <th>Progress</th>
-                            <th width="150">Aksi</th>
+                            <th width="200">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -114,7 +111,7 @@
                                         : 0;
                                 @endphp
                                 <div class="progress" style="height: 25px;">
-                                    <div class="progress-bar bg-{{ $bapb->is_complete ? 'success' : 'warning' }}" 
+                                    <div class="progress-bar bg-{{ $percentage >= 100 ? 'success' : 'warning' }}" 
                                          role="progressbar" 
                                          style="width: {{ $percentage }}%;">
                                         {{ $percentage }}%
@@ -130,13 +127,23 @@
                                    class="btn btn-sm btn-warning" title="Edit BAPB">
                                     <i class="bi bi-pencil"></i>
                                 </a>
+                                @if($bapb->total_scan === 0)
+                                <form action="{{ route('igi.destroy', $bapb->id) }}" method="POST" class="d-inline"
+                                      onsubmit="return confirm('Yakin ingin menghapus BAPB ini?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Hapus BAPB">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                                @endif
                             </td>
                         </tr>
                         @empty
                         <tr>
                             <td colspan="9" class="text-center text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
-                                Belum ada data BAPB. Klik tombol "Tambah BAPB Baru" untuk mulai.
+                                Belum ada data BAPB. Klik "Tambah BAPB Baru" untuk mulai.
                             </td>
                         </tr>
                         @endforelse
