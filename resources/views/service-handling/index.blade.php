@@ -64,7 +64,7 @@
             <div class="row">
                 <div class="col-md-4">
                     <div class="card">
-                        <div class="card-header bg-warning text-dark">
+                        <div class="card-header bg-warning">
                             <h6 class="mb-0"><i class="bi bi-upc-scan"></i> Form Service Handling</h6>
                         </div>
                         <div class="card-body">

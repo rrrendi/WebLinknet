@@ -22,17 +22,49 @@
             --danger-color: #e74c3c;
             --warning-color: #f39c12;
             --info-color: #3498db;
+
+            /* Light Theme Colors */
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --text-muted: #6c757d;
+            --border-color: #dee2e6;
+            --sidebar-bg: linear-gradient(180deg, #000000ff 0%, var(--primary-color) 100%);
+            --navbar-bg: #ffffff;
+            --table-hover: rgba(0, 68, 131, 0.05);
+            --page-title-color: #000000ff;
         }
+
+        /* Dark Theme Colors */
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #3d3d3d;
+            --sidebar-bg: linear-gradient(180deg, #0a0a0a 0%, #1a2332 100%);
+            --navbar-bg: #2d2d2d;
+            --table-hover: rgba(255, 255, 255, 0.05);
+            --page-title-color: #ffffff;
+        }
+
+        .page-title {
+            color: var(--page-title-color);
+            font-weight: 600;
+        }
+
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         /* SIDEBAR */
         .sidebar {
             min-height: 100vh;
-            background: linear-gradient(180deg, #000000ff 0%, var(--primary-color) 100%);
+            background: var(--sidebar-bg);
             position: fixed;
             top: 0;
             left: 0;
@@ -89,11 +121,16 @@
 
         /* NAVBAR */
         .navbar-custom {
-            background-color: white;
+            background-color: var(--navbar-bg);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
             border-radius: 10px;
             padding: 15px 20px;
+            transition: background-color 0.3s ease;
+        }
+
+        [data-theme="dark"] .navbar-custom {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
         }
 
         /* CARD */
@@ -102,6 +139,13 @@
             border-radius: 10px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             margin-bottom: 20px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        [data-theme="dark"] .card {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         }
 
         .card-header {
@@ -132,8 +176,41 @@
         }
 
         /* TABLE */
+        .table {
+            color: var(--text-color);
+        }
+
+        .table thead th {
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
+        .table tbody td {
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+
         .table-hover tbody tr:hover {
-            background-color: rgba(0, 68, 131, 0.05);
+            background-color: var(--table-hover);
+        }
+
+        [data-theme="dark"] .table {
+            --bs-table-bg: var(--card-bg);
+            --bs-table-color: var(--text-color);
+            --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+            --bs-table-active-bg: rgba(255, 255, 255, 0.05);
+            --bs-table-border-color: var(--border-color);
+        }
+
+        [data-theme="dark"] .table> :not(caption)>*>* {
+            color: var(--text-color);
+            background-color: var(--card-bg);
+            border-bottom-color: var(--border-color);
+        }
+
+        .table-dark {
+            --bs-table-bg: #ffffffff;
+            --bs-table-color: #fff;
         }
 
         /* BUTTONS */
@@ -157,16 +234,102 @@
         }
 
         /* FORM */
+        .form-control,
+        .form-select {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+            transition: all 0.3s ease;
+        }
+
         .form-control:focus,
         .form-select:focus {
             border-color: var(--info-color);
             box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .form-control::placeholder {
+            color: var(--text-muted);
+        }
+
+        [data-theme="dark"] .form-select option {
+            background-color: var(--card-bg);
+            color: var(--text-color);
         }
 
         /* ALERT */
         .alert {
             border-radius: 8px;
             border: none;
+        }
+
+        /* TEXT COLORS */
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        /* THEME TOGGLE BUTTON */
+        .theme-toggle {
+            position: relative;
+            width: 60px;
+            height: 30px;
+            background-color: var(--border-color);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            border: none;
+            padding: 0;
+        }
+
+        .theme-toggle::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        [data-theme="dark"] .theme-toggle {
+            background-color: var(--primary-color);
+        }
+
+        [data-theme="dark"] .theme-toggle::before {
+            transform: translateX(30px);
+        }
+
+        .theme-icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            transition: opacity 0.3s ease;
+        }
+
+        .theme-icon-sun {
+            left: 8px;
+            color: #f39c12;
+        }
+
+        .theme-icon-moon {
+            right: 8px;
+            color: #f1c40f;
+        }
+
+        [data-theme="light"] .theme-icon-moon {
+            opacity: 0.3;
+        }
+
+        [data-theme="dark"] .theme-icon-sun {
+            opacity: 0.3;
         }
 
         /* RESPONSIVE */
@@ -202,117 +365,47 @@
             border-radius: 3px;
         }
 
+        /* Dark theme scrollbar */
+        [data-theme="dark"] ::-webkit-scrollbar {
+            background-color: var(--card-bg);
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-thumb {
+            background-color: var(--border-color);
+        }
+
         /* LOADING SPINNER */
         .spinner-border-sm {
             width: 1rem;
             height: 1rem;
             border-width: 0.15em;
         }
-    </style>
 
+        /* PAGINATION */
+        [data-theme="dark"] .pagination .page-link {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .pagination .page-link:hover {
+            background-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .pagination .page-item.active .page-link {
+            background-color: var(--info-color);
+            border-color: var(--info-color);
+        }
+
+        [data-theme="dark"] .pagination .page-item.disabled .page-link {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+        }
+    </style>
     @stack('styles')
 </head>
-
-<!-- Tambahkan script ini SEBELUM tag </body> di layouts/app.blade.php -->
-<!-- Letakkan sebelum @stack('scripts') -->
-
-<script>
-    // CSRF Token for AJAX
-    $.ajaxSetup({
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        }
-    });
-
-    // Auto dismiss alerts
-    setTimeout(function() {
-        $('.alert').fadeOut('slow');
-    }, 5000);
-
-    // Toggle sidebar for mobile
-    function toggleSidebar() {
-        $('#sidebar').toggleClass('show');
-    }
-
-    // Close sidebar when clicking outside on mobile
-    $(document).on('click', function(e) {
-        if ($(window).width() <= 768) {
-            if (!$(e.target).closest('.sidebar, .mobile-toggle').length) {
-                $('#sidebar').removeClass('show');
-            }
-        }
-    });
-
-    // ============================================
-    // SOUND NOTIFICATION FUNCTION
-    // ============================================
-    function playScanSuccessSound() {
-        // Create AudioContext
-        const audioContext = new(window.AudioContext || window.webkitAudioContext)();
-
-        // Single beep untuk berhasil
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(2000, audioContext.currentTime);
-
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.15);
-    }
-
-    function playScanErrorSound() {
-        // Create AudioContext for error sound
-        const audioContext = new(window.AudioContext || window.webkitAudioContext)();
-
-        // First beep (error sound)
-        const oscillator1 = audioContext.createOscillator();
-        const gainNode1 = audioContext.createGain();
-
-        oscillator1.connect(gainNode1);
-        gainNode1.connect(audioContext.destination);
-
-        oscillator1.type = 'square';
-        oscillator1.frequency.setValueAtTime(300, audioContext.currentTime);
-
-        gainNode1.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-
-        oscillator1.start(audioContext.currentTime);
-        oscillator1.stop(audioContext.currentTime + 0.15);
-
-        // Second beep (error sound) - langsung setelah beep pertama
-        const oscillator2 = audioContext.createOscillator();
-        const gainNode2 = audioContext.createGain();
-
-        oscillator2.connect(gainNode2);
-        gainNode2.connect(audioContext.destination);
-
-        oscillator2.type = 'square';
-        oscillator2.frequency.setValueAtTime(300, audioContext.currentTime + 0.15);
-
-        gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.15);
-        gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-        oscillator2.start(audioContext.currentTime + 0.15);
-        oscillator2.stop(audioContext.currentTime + 0.3);
-    }
-
-    // Alternative: Menggunakan HTML5 Audio dengan URL online (jika ingin suara lebih natural)
-    function playScanSuccessSoundAlt() {
-        const audio = new Audio('https://www.soundjay.com/button/beep-07.wav');
-        audio.volume = 0.5;
-        audio.play().catch(e => console.log('Audio play failed:', e));
-    }
-</script>
-
-@stack('scripts')
 
 <body>
     <!-- Sidebar -->
@@ -320,45 +413,34 @@
         <div class="brand">
             <i class="bi bi-box-seam"></i> Management Produksi Linknet Koperasi
         </div>
-
         <nav class="nav flex-column">
             <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
-
             <a class="nav-link {{ request()->is('igi*') ? 'active' : '' }}" href="{{ route('igi.index') }}">
                 <i class="bi bi-inbox"></i> IGI
             </a>
-
             <a class="nav-link {{ request()->is('koreksi-barcode*') ? 'active' : '' }}" href="{{ route('koreksi-barcode.index') }}">
                 <i class="bi bi-pencil-square"></i> Koreksi Barcode
             </a>
-
             <a class="nav-link {{ request()->is('uji-fungsi*') ? 'active' : '' }}" href="{{ route('uji-fungsi.index') }}">
                 <i class="bi bi-check-circle"></i> Uji Fungsi
             </a>
-
             <a class="nav-link {{ request()->is('repair*') ? 'active' : '' }}" href="{{ route('repair.index') }}">
                 <i class="bi bi-tools"></i> Repair
             </a>
-
             <a class="nav-link {{ request()->is('rekondisi*') ? 'active' : '' }}" href="{{ route('rekondisi.index') }}">
                 <i class="bi bi-arrow-clockwise"></i> Rekondisi
             </a>
-
             <a class="nav-link {{ request()->is('service-handling*') ? 'active' : '' }}" href="{{ route('service-handling.index') }}">
                 <i class="bi bi-wrench"></i> Service Handling
             </a>
-
             <a class="nav-link {{ request()->is('packing*') ? 'active' : '' }}" href="{{ route('packing.index') }}">
                 <i class="bi bi-box"></i> Packing
             </a>
-
-
             <a class="nav-link {{ request()->is('download*') ? 'active' : '' }}" href="{{ route('download.index') }}">
                 <i class="bi bi-download"></i> Download Data
             </a>
-
             @if(auth()->user()->isAdmin())
             <a class="nav-link {{ request()->is('users*') ? 'active' : '' }}" href="{{ route('users.index') }}">
                 <i class="bi bi-people"></i> User Management
@@ -384,12 +466,16 @@
                 <button class="btn btn-outline-primary mobile-toggle" onclick="toggleSidebar()">
                     <i class="bi bi-list"></i>
                 </button>
-
                 <span class="navbar-brand mb-0 h5">
-                    @yield('page-title', 'Dashboard')
+                    <span class="page-title">@yield('page-title', 'Dashboard')</span>
                 </span>
+                <div class="d-flex align-items-center gap-3">
+                    <!-- Theme Toggle -->
+                    <button class="theme-toggle" id="themeToggle" title="Toggle Dark/Light Mode">
+                        <i class="bi bi-sun-fill theme-icon theme-icon-sun"></i>
+                        <i class="bi bi-moon-stars-fill theme-icon theme-icon-moon"></i>
+                    </button>
 
-                <div class="d-flex align-items-center">
                     <span class="badge bg-{{ auth()->user()->isAdmin() ? 'danger' : 'primary' }} me-2">
                         {{ auth()->user()->isAdmin() ? 'ADMIN' : 'USER' }}
                     </span>
@@ -407,14 +493,12 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         @endif
-
         @if(session('error'))
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         @endif
-
         @if($errors->any())
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <ul class="mb-0">
@@ -444,6 +528,44 @@
             }
         });
 
+        // ============================================
+        // THEME TOGGLE FUNCTIONALITY
+        // ============================================
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+
+        // Load saved theme from localStorage
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        htmlElement.setAttribute('data-theme', currentTheme);
+
+        // Toggle theme
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+
+            // Optional: Play sound on theme change
+            playThemeChangeSound();
+        });
+
+        function playThemeChangeSound() {
+            const audioContext = new(window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
         // Auto dismiss alerts
         setTimeout(function() {
             $('.alert').fadeOut('slow');
@@ -462,6 +584,66 @@
                 }
             }
         });
+
+        // ============================================
+        // SOUND NOTIFICATION FUNCTIONS
+        // ============================================
+
+        // Suara berhasil - BEEP 1 kali
+        function playScanSuccessSound() {
+            const audioContext = new(window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(2000, audioContext.currentTime);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.15);
+        }
+
+        // Suara gagal - BEEP 2 kali
+        function playScanErrorSound() {
+            const audioContext = new(window.AudioContext || window.webkitAudioContext)();
+
+            // First beep
+            const oscillator1 = audioContext.createOscillator();
+            const gainNode1 = audioContext.createGain();
+
+            oscillator1.connect(gainNode1);
+            gainNode1.connect(audioContext.destination);
+
+            oscillator1.type = 'square';
+            oscillator1.frequency.setValueAtTime(300, audioContext.currentTime);
+
+            gainNode1.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode1.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+
+            oscillator1.start(audioContext.currentTime);
+            oscillator1.stop(audioContext.currentTime + 0.15);
+
+            // Second beep - langsung setelah beep pertama
+            const oscillator2 = audioContext.createOscillator();
+            const gainNode2 = audioContext.createGain();
+
+            oscillator2.connect(gainNode2);
+            gainNode2.connect(audioContext.destination);
+
+            oscillator2.type = 'square';
+            oscillator2.frequency.setValueAtTime(300, audioContext.currentTime + 0.15);
+
+            gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.15);
+            gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+            oscillator2.start(audioContext.currentTime + 0.15);
+            oscillator2.stop(audioContext.currentTime + 0.3);
+        }
     </script>
 
     @stack('scripts')

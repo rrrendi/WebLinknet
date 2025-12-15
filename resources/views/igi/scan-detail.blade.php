@@ -324,8 +324,10 @@ $(document).ready(function() {
                     // Update progress di header
                     $('.badge.bg-warning').text(`${response.total_scan} / ${response.jumlah}`);
                 }
+                playScanSuccessSound();
             },
             error: function(xhr) {
+                playScanErrorSound();
                 alert(xhr.responseJSON?.message || 'Error saat menyimpan!');
                 $('#serialNumber').focus();
             }
