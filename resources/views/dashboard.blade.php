@@ -1,11 +1,8 @@
 @extends('layouts.app')
-
 @section('title', 'Dashboard Stok')
 @section('page-title', 'Dashboard Management Produksi')
-
 @section('content')
 <div class="container-fluid">
-    
     <!-- Stats Cards Row 1 -->
     <div class="row">
         <div class="col-md-3 col-sm-6 mb-4">
@@ -24,7 +21,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="col-md-3 col-sm-6 mb-4">
             <div class="card stat-card border-start border-info border-4">
                 <div class="card-body">
@@ -41,7 +37,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="col-md-3 col-sm-6 mb-4">
             <div class="card stat-card border-start border-success border-4">
                 <div class="card-body">
@@ -58,7 +53,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="col-md-3 col-sm-6 mb-4">
             <div class="card stat-card border-start border-danger border-4">
                 <div class="card-body">
@@ -76,7 +70,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Stats Cards Row 2 -->
     <div class="row">
         <div class="col-md-3 col-sm-6 mb-4">
@@ -95,7 +89,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="col-md-3 col-sm-6 mb-4">
             <div class="card stat-card border-start border-danger border-4">
                 <div class="card-body">
@@ -112,7 +105,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="col-md-3 col-sm-6 mb-4">
             <div class="card stat-card border-start border-info border-4">
                 <div class="card-body">
@@ -129,7 +121,6 @@
                 </div>
             </div>
         </div>
-        
         <div class="col-md-3 col-sm-6 mb-4">
             <div class="card stat-card border-start border-warning border-4">
                 <div class="card-body">
@@ -147,7 +138,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Packing Card -->
     <div class="row">
         <div class="col-md-12 mb-4">
@@ -167,7 +158,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Status Breakdown -->
     <div class="row">
         <div class="col-12">
@@ -218,54 +209,56 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Chart per Jenis -->
     <div class="row mt-4">
         @foreach(['STB', 'ONT', 'ROUTER'] as $jenis)
-        <div class="col-md-4 mb-3">
-            <div class="card">
-                <div class="card-header bg-{{ $jenis === 'STB' ? 'info' : ($jenis === 'ONT' ? 'success' : 'warning') }} text-white">
-                    <h6 class="mb-0">
-                        <i class="bi bi-{{ $jenis === 'STB' ? 'tv' : ($jenis === 'ONT' ? 'router' : 'wifi') }}"></i>
-                        {{ $jenis }}
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Total Masuk:</span>
-                        <strong class="text-primary">{{ number_format($chartData[$jenis]['total']) }}</strong>
+            @php
+                $totalJenis = $chartData[$jenis]['total'];
+                $packingJenis = $chartData[$jenis]['packing'];
+                $percentageJenis = $totalJenis > 0 ? round(($packingJenis / $totalJenis) * 100) : 0;
+                $iconClass = $jenis === 'STB' ? 'tv' : ($jenis === 'ONT' ? 'router' : 'wifi');
+                $colorClass = $jenis === 'STB' ? 'info' : ($jenis === 'ONT' ? 'success' : 'warning');
+            @endphp
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-header bg-{{ $colorClass }} text-white">
+                        <h6 class="mb-0">
+                            <i class="bi bi-{{ $iconClass }}"></i>
+                            {{ $jenis }}
+                        </h6>
                     </div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Sudah Packing:</span>
-                        <strong class="text-success">{{ number_format($chartData[$jenis]['packing']) }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-3">
-                        <span class="text-muted">Dalam Proses:</span>
-                        <strong class="text-warning">{{ number_format($chartData[$jenis]['total'] - $chartData[$jenis]['packing']) }}</strong>
-                    </div>
-                    
-                    <!-- Progress Bar -->
-                    @php
-                        $percentage = $chartData[$jenis]['total'] > 0 
-                            ? round(($chartData[$jenis]['packing'] / $chartData[$jenis]['total']) * 100) 
-                            : 0;
-                    @endphp
-                    <div class="progress" style="height: 25px;">
-                        <div class="progress-bar bg-success" role="progressbar" 
-                             style="width: {{ $percentage }}%;" 
-                             aria-valuenow="{{ $percentage }}" 
-                             aria-valuemin="0" 
-                             aria-valuemax="100">
-                            {{ $percentage }}%
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Total Masuk:</span>
+                            <strong class="text-primary">{{ number_format($totalJenis) }}</strong>
                         </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Sudah Packing:</span>
+                            <strong class="text-success">{{ number_format($packingJenis) }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="text-muted">Dalam Proses:</span>
+                            <strong class="text-warning">{{ number_format($totalJenis - $packingJenis) }}</strong>
+                        </div>
+                        <!-- Progress Bar -->
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar bg-success" 
+                                 role="progressbar" 
+                                 style="width: {{ $percentageJenis }}%;"
+                                 aria-valuenow="{{ $percentageJenis }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                {{ $percentageJenis }}%
+                            </div>
+                        </div>
+                        <small class="text-muted">Tingkat Penyelesaian</small>
                     </div>
-                    <small class="text-muted">Tingkat Penyelesaian</small>
                 </div>
             </div>
-        </div>
         @endforeach
     </div>
-    
+
     <!-- Quick Actions -->
     <div class="row mt-4">
         <div class="col-12">
@@ -304,6 +297,5 @@
             </div>
         </div>
     </div>
-    
 </div>
 @endsection

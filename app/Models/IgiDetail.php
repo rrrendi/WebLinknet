@@ -1,6 +1,5 @@
 <?php
 // app/Models/IgiDetail.php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -119,5 +118,20 @@ class IgiDetail extends Model
             'user_id' => $userId ?? Auth::id(),
             'keterangan' => $keterangan
         ]);
+    }
+
+    // Get previous status based on activity logs
+    public function getPreviousStatus()
+    {
+        $activities = $this->activityLogs()->orderBy('tanggal', 'desc')->get();
+        
+        if ($activities->count() <= 1) {
+            return 'IGI';
+        }
+
+        // Get the second last activity
+        $previousActivity = $activities->skip(1)->first();
+        
+        return $previousActivity ? $previousActivity->aktivitas : 'IGI';
     }
 }

@@ -1,6 +1,5 @@
 <?php
 // app/Http/Controllers/RepairController.php
-
 namespace App\Http\Controllers;
 
 use App\Models\Repair;
@@ -15,10 +14,9 @@ class RepairController extends Controller
     public function index()
     {
         $monitoring = $this->getMonitoringData();
-        
         $recentRepairs = Repair::with(['igiDetail.bapb', 'user'])
-                               ->orderBy('repair_time', 'desc')
-                               ->paginate(20);
+            ->orderBy('repair_time', 'desc')
+            ->paginate(20);
 
         return view('repair.index', compact('monitoring', 'recentRepairs'));
     }
@@ -125,17 +123,26 @@ class RepairController extends Controller
             ]);
 
             $detail->updateStatusProses('REPAIR');
-            $detail->logActivity('REPAIR', $request->result, Auth::id(), 
-                                 'Jenis Kerusakan: ' . $request->jenis_kerusakan);
+            $detail->logActivity('REPAIR', $request->result, Auth::id(), 'Jenis Kerusakan: ' . $request->jenis_kerusakan);
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Repair berhasil disimpan!',
-                'data' => $repair->load(['igiDetail.bapb', 'user'])
+                'data' => [
+                    'id' => $repair->id,
+                    'repair_time' => $repair->repair_time->format('d-m-Y H:i:s'),
+                    'serial_number' => $detail->serial_number,
+                    'jenis' => $detail->jenis,
+                    'merk' => $detail->merk,
+                    'type' => $detail->type,
+                    'jenis_kerusakan' => $repair->jenis_kerusakan,
+                    'result' => $repair->result,
+                    'user_name' => $repair->user->name,
+                    'can_delete' => true
+                ]
             ]);
-
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
@@ -160,10 +167,11 @@ class RepairController extends Controller
                 ], 403);
             }
 
-            if ($detail->rekondisi()->exists() || $detail->serviceHandling()->exists()) {
+            // Check: harus proses terakhir
+            if ($detail->status_proses !== 'REPAIR') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak bisa hapus. Sudah ada proses lanjutan!'
+                    'message' => 'Tidak bisa hapus! Barang sudah masuk proses berikutnya: ' . $detail->status_proses
                 ], 403);
             }
 
@@ -177,7 +185,6 @@ class RepairController extends Controller
                 'success' => true,
                 'message' => 'Data Repair berhasil dihapus!'
             ]);
-
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([

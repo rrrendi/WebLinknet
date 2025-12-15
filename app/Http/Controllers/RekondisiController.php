@@ -14,8 +14,9 @@ class RekondisiController extends Controller
     {
         $monitoring = $this->getMonitoring();
         $recentRekondisi = Rekondisi::with(['igiDetail.bapb', 'user'])
-                                ->orderBy('rekondisi_time', 'desc')
-                                ->paginate(20);
+            ->orderBy('rekondisi_time', 'desc')
+            ->paginate(20);
+
         return view('rekondisi.index', compact('monitoring', 'recentRekondisi'));
     }
 
@@ -38,6 +39,7 @@ class RekondisiController extends Controller
     public function checkSerial(Request $request)
     {
         $detail = IgiDetail::where('serial_number', $request->serial_number)->first();
+
         if (!$detail) {
             return response()->json(['success' => false, 'message' => 'Serial Number tidak ditemukan!'], 404);
         }
@@ -47,8 +49,7 @@ class RekondisiController extends Controller
                        $detail->repair()->where('result', 'OK')->exists();
 
         if (!$hasOkResult) {
-            return response()->json(['success' => false, 
-                'message' => 'Rekondisi hanya untuk barang dengan result OK!'], 400);
+            return response()->json(['success' => false, 'message' => 'Rekondisi hanya untuk barang dengan result OK!'], 400);
         }
 
         return response()->json(['success' => true, 'data' => [
@@ -65,7 +66,7 @@ class RekondisiController extends Controller
         DB::beginTransaction();
         try {
             $detail = IgiDetail::findOrFail($request->igi_detail_id);
-            
+
             $rekondisi = Rekondisi::create([
                 'igi_detail_id' => $detail->id,
                 'rekondisi_time' => Carbon::now(),
@@ -76,8 +77,21 @@ class RekondisiController extends Controller
             $detail->logActivity('REKONDISI', 'N/A', Auth::id());
 
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Rekondisi berhasil!', 
-                                     'data' => $rekondisi->load(['igiDetail.bapb', 'user'])]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Rekondisi berhasil!',
+                'data' => [
+                    'id' => $rekondisi->id,
+                    'rekondisi_time' => $rekondisi->rekondisi_time->format('d-m-Y H:i:s'),
+                    'serial_number' => $detail->serial_number,
+                    'jenis' => $detail->jenis,
+                    'merk' => $detail->merk,
+                    'type' => $detail->type,
+                    'user_name' => $rekondisi->user->name,
+                    'can_delete' => true
+                ]
+            ]);
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -90,21 +104,25 @@ class RekondisiController extends Controller
         try {
             $user = $request->user();
             $rekondisi = Rekondisi::with('igiDetail')->findOrFail($id);
-            
+
             if (!$user || !$user->canDeleteActivity($rekondisi->user_id)) {
                 return response()->json(['success' => false, 'message' => 'Tidak ada izin!'], 403);
             }
 
-            if ($rekondisi->igiDetail->serviceHandling()->exists() || 
-                $rekondisi->igiDetail->packing()->exists()) {
-                return response()->json(['success' => false, 'message' => 'Ada proses lanjutan!'], 403);
+            // Check: harus proses terakhir
+            if ($rekondisi->igiDetail->status_proses !== 'REKONDISI') {
+                return response()->json(['success' => false, 'message' => 'Tidak bisa hapus! Barang sudah masuk proses berikutnya.'], 403);
             }
 
             $rekondisi->delete();
-            $rekondisi->igiDetail->updateStatusProses('REPAIR');
+            
+            // Kembalikan ke status sebelumnya (bisa REPAIR atau UJI_FUNGSI)
+            $previousStatus = $rekondisi->igiDetail->getPreviousStatus();
+            $rekondisi->igiDetail->updateStatusProses($previousStatus);
             $rekondisi->igiDetail->activityLogs()->where('aktivitas', 'REKONDISI')->delete();
 
             DB::commit();
+
             return response()->json(['success' => true, 'message' => 'Berhasil dihapus!']);
         } catch (\Exception $e) {
             DB::rollback();

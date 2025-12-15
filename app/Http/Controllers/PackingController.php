@@ -8,15 +8,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
-
 class PackingController extends Controller
 {
     public function index()
     {
         $monitoring = $this->getMonitoring();
         $recentPacking = Packing::with(['igiDetail.bapb', 'user'])
-                             ->orderBy('packing_time', 'desc')
-                             ->paginate(20);
+            ->orderBy('packing_time', 'desc')
+            ->paginate(20);
+
         return view('packing.index', compact('monitoring', 'recentPacking'));
     }
 
@@ -39,14 +39,14 @@ class PackingController extends Controller
     public function checkSerial(Request $request)
     {
         $detail = IgiDetail::where('serial_number', $request->serial_number)->first();
+
         if (!$detail) {
             return response()->json(['success' => false, 'message' => 'Serial Number tidak ditemukan!'], 404);
         }
 
         // Harus sudah rekondisi
         if (!$detail->rekondisi()->exists()) {
-            return response()->json(['success' => false, 
-                'message' => 'Packing hanya untuk barang yang sudah Rekondisi!'], 400);
+            return response()->json(['success' => false, 'message' => 'Packing hanya untuk barang yang sudah Rekondisi!'], 400);
         }
 
         return response()->json(['success' => true, 'data' => [
@@ -63,21 +63,34 @@ class PackingController extends Controller
         DB::beginTransaction();
         try {
             $detail = IgiDetail::findOrFail($request->igi_detail_id);
-            
+
             $packing = Packing::create([
                 'igi_detail_id' => $detail->id,
                 'packing_time' => Carbon::now(),
                 'user_id' => Auth::id(),
-                'kondisi_box' => $request->kondisi_box,
-                'catatan' => $request->catatan
+                'kondisi_box' => null, // Sesuai PDF: tidak ada input kondisi box
+                'catatan' => null
             ]);
 
             $detail->updateStatusProses('PACKING');
             $detail->logActivity('PACKING', 'N/A', Auth::id());
 
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Packing berhasil!', 
-                                     'data' => $packing->load(['igiDetail.bapb', 'user'])]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Packing berhasil!',
+                'data' => [
+                    'id' => $packing->id,
+                    'packing_time' => $packing->packing_time->format('d-m-Y H:i:s'),
+                    'serial_number' => $detail->serial_number,
+                    'jenis' => $detail->jenis,
+                    'merk' => $detail->merk,
+                    'type' => $detail->type,
+                    'user_name' => $packing->user->name,
+                    'can_delete' => true
+                ]
+            ]);
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -90,16 +103,25 @@ class PackingController extends Controller
         try {
             $user = $request->user();
             $packing = Packing::with('igiDetail')->findOrFail($id);
-            
+
             if (!$user || !$user->canDeleteActivity($packing->user_id)) {
                 return response()->json(['success' => false, 'message' => 'Tidak ada izin!'], 403);
             }
 
+            // Check: harus proses terakhir
+            if ($packing->igiDetail->status_proses !== 'PACKING') {
+                return response()->json(['success' => false, 'message' => 'Tidak bisa hapus! Barang sudah masuk proses berikutnya.'], 403);
+            }
+
             $packing->delete();
-            $packing->igiDetail->updateStatusProses('REKONDISI');
+            
+            // Kembalikan ke status sebelumnya
+            $previousStatus = $packing->igiDetail->getPreviousStatus();
+            $packing->igiDetail->updateStatusProses($previousStatus);
             $packing->igiDetail->activityLogs()->where('aktivitas', 'PACKING')->delete();
 
             DB::commit();
+
             return response()->json(['success' => true, 'message' => 'Berhasil dihapus!']);
         } catch (\Exception $e) {
             DB::rollback();

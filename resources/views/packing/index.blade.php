@@ -1,63 +1,62 @@
 @extends('layouts.app')
-
 @section('title', 'Packing')
 @section('page-title', 'Packing')
-
 @section('content')
 <div class="container-fluid">
-    <!-- Tab Navigation -->
-    <ul class="nav nav-tabs mb-3" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="monitoring-tab" data-bs-toggle="tab" data-bs-target="#monitoring" type="button">
-                <i class="bi bi-bar-chart"></i> Monitoring Packing
+    <ul class="nav nav-tabs mb-3" id="packingTabs">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#monitoring">
+                <i class="bi bi-bar-chart"></i> Monitoring
             </button>
         </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="packing-tab" data-bs-toggle="tab" data-bs-target="#packing" type="button">
-                <i class="bi bi-box-seam"></i> Packing
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#scanning">
+                <i class="bi bi-box-seam"></i> Actual Scanning
             </button>
         </li>
     </ul>
 
-    <!-- Tab Content -->
     <div class="tab-content">
-        <!-- Tab 1: Monitoring Packing -->
-        <div class="tab-pane fade show active" id="monitoring" role="tabpanel">
+        {{-- TAB 1: MONITORING --}}
+        <div class="tab-pane fade show active" id="monitoring">
             <div class="card">
                 <div class="card-header bg-success text-white">
                     <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Ringkasan Data Packing</h5>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover text-center">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>ONT</th>
-                                    <th>STB</th>
-                                    <th>ROUTER</th>
-                                    <th class="bg-success text-white">TOTAL</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="bg-success bg-opacity-10">
-                                        <h3 class="mb-0 text-success">{{ $monitoring['ONT'] ?? 0 }}</h3>
-                                    </td>
-                                    <td class="bg-success bg-opacity-10">
-                                        <h3 class="mb-0 text-success">{{ $monitoring['STB'] ?? 0 }}</h3>
-                                    </td>
-                                    <td class="bg-success bg-opacity-10">
-                                        <h3 class="mb-0 text-success">{{ $monitoring['ROUTER'] ?? 0 }}</h3>
-                                    </td>
-                                    <td class="bg-success bg-opacity-25">
-                                        <h2 class="mb-0 text-success fw-bold">{{ $monitoring['TOTAL'] ?? 0 }}</h2>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @foreach(['Linknet', 'Telkomsel'] as $pemilik)
+                        <h6 class="text-muted mb-3">{{ $pemilik }}</h6>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-bordered text-center">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>STB</th>
+                                        <th>ONT</th>
+                                        <th>ROUTER</th>
+                                        <th class="bg-success">TOTAL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="bg-success bg-opacity-10">
+                                            <h3 class="mb-0 text-success">{{ $monitoring[$pemilik]['STB'] ?? 0 }}</h3>
+                                        </td>
+                                        <td class="bg-success bg-opacity-10">
+                                            <h3 class="mb-0 text-success">{{ $monitoring[$pemilik]['ONT'] ?? 0 }}</h3>
+                                        </td>
+                                        <td class="bg-success bg-opacity-10">
+                                            <h3 class="mb-0 text-success">{{ $monitoring[$pemilik]['ROUTER'] ?? 0 }}</h3>
+                                        </td>
+                                        <td class="bg-success bg-opacity-25">
+                                            <h2 class="mb-0 text-success fw-bold">{{ $monitoring[$pemilik]['TOTAL'] ?? 0 }}</h2>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    @endforeach
 
-                    <!-- Progress Summary -->
+                    {{-- Progress Summary --}}
                     <div class="row mt-4">
                         <div class="col-md-12">
                             <div class="card bg-light">
@@ -65,11 +64,11 @@
                                     <h6 class="mb-3"><i class="bi bi-trophy"></i> Status Packing</h6>
                                     <div class="row text-center">
                                         <div class="col-md-4">
-                                            <h4 class="text-success">{{ $monitoring['TOTAL'] ?? 0 }}</h4>
-                                            <small class="text-muted">Barang Selesai Di-packing</small>
+                                            <h4 class="text-success">{{ array_sum(array_column($monitoring, 'TOTAL')) }}</h4>
+                                            <small class="text-muted">Total Barang Selesai Di-packing</small>
                                         </div>
                                         <div class="col-md-4">
-                                            <h4 class="text-primary">{{ $monitoring['TOTAL'] ?? 0 }}</h4>
+                                            <h4 class="text-primary">{{ array_sum(array_column($monitoring, 'TOTAL')) }}</h4>
                                             <small class="text-muted">Siap Dikirim</small>
                                         </div>
                                         <div class="col-md-4">
@@ -85,59 +84,38 @@
             </div>
         </div>
 
-        <!-- Tab 2: Packing -->
-        <div class="tab-pane fade" id="packing" role="tabpanel">
+        {{-- TAB 2: SCANNING --}}
+        <div class="tab-pane fade" id="scanning">
             <div class="row">
-                <!-- Form Packing -->
                 <div class="col-md-4">
                     <div class="card">
                         <div class="card-header bg-success text-white">
-                            <h5 class="mb-0"><i class="bi bi-box-seam"></i> Form Packing</h5>
+                            <h6 class="mb-0"><i class="bi bi-box-seam"></i> Form Packing</h6>
                         </div>
                         <div class="card-body">
-
+                            <div class="alert alert-success">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Ketentuan:</strong> Hanya barang yang sudah melewati Rekondisi yang bisa masuk Packing.
+                            </div>
                             <form id="packingForm">
                                 <div class="mb-3">
-                                    <label class="form-label">Scan Barcode / Serial Number <span class="text-danger">*</span></label>
+                                    <label class="form-label"><strong>Scan Barcode / Serial Number</strong> <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
-                                        <input type="text" id="serialNumberPacking" class="form-control" placeholder="Scan atau ketik Serial Number" required autofocus>
+                                        <input type="text" id="serialNumberPacking" class="form-control form-control-lg" placeholder="Scan atau ketik Serial Number" required autofocus autocomplete="off">
                                     </div>
                                     <small class="text-muted">Tekan Enter setelah scan barcode</small>
-                                </div>
-
-                                <div id="autoFillPacking" style="display: none;">
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Nama Barang</label>
-                                        <input type="text" id="namaBarangPacking" class="form-control" readonly>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Type / Merk</label>
-                                        <input type="text" id="typePacking" class="form-control" readonly>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label class="form-label">Waktu Packing</label>
-                                        <input type="text" id="waktuPacking" class="form-control" readonly>
-                                    </div>
-
-                                    <button type="submit" class="btn btn-success w-100">
-                                        <i class="bi bi-box-seam"></i> Simpan Data Packing
-                                    </button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tabel Data Packing -->
                 <div class="col-md-8">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0"><i class="bi bi-table"></i> Data Packing</h5>
-                            <button class="btn btn-sm btn-primary" onclick="refreshPackingTable()">
+                            <h6 class="mb-0"><i class="bi bi-table"></i> Data Packing</h6>
+                            <button class="btn btn-sm btn-primary" onclick="location.reload()">
                                 <i class="bi bi-arrow-clockwise"></i> Refresh
                             </button>
                         </div>
@@ -148,43 +126,34 @@
                                         <tr>
                                             <th>Packing Time</th>
                                             <th>Serial Number</th>
-                                            <th>Nama Barang</th>
+                                            <th>Jenis</th>
+                                            <th>Merk</th>
                                             <th>Type</th>
-                                            <th>Status</th>
+                                            <th>User</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody id="packingTableBody">
                                         @forelse($recentPacking as $pack)
-                                        <tr id="packing-row-{{ $pack->id }}">
-                                            <td>{{ $pack->waktu_packing->format('d-m-Y H:i:s') }}</td>
-                                            <td><code>{{ $pack->igi->serial_number ?? '-' }}</code></td>
-                                            <td>{{ $pack->igi->nama_barang ?? '-' }}</td>
-                                            <td>{{ $pack->igi->type ?? '-' }}</td>
-                                            <td>
-                                                <span class="badge bg-success">
-                                                    <i class="bi bi-check-circle"></i> PACKED
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div class="btn-group btn-group-sm" role="group">
-                                                    <button type="button" class="btn btn-warning btn-rollback-packing"
-                                                        data-id="{{ $pack->id }}"
-                                                        title="Rollback ke Rekondisi">
-                                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-danger btn-fulldelete-packing"
-                                                        data-id="{{ $pack->id }}"
-                                                        title="Hapus dari semua proses">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                            <tr id="packing-row-{{ $pack->id }}">
+                                                <td>{{ $pack->packing_time->format('d-m-Y H:i:s') }}</td>
+                                                <td><code>{{ $pack->igiDetail->serial_number }}</code></td>
+                                                <td>{{ $pack->igiDetail->jenis }}</td>
+                                                <td>{{ $pack->igiDetail->merk }}</td>
+                                                <td>{{ $pack->igiDetail->type }}</td>
+                                                <td>{{ $pack->user->name }}</td>
+                                                <td>
+                                                    @if(auth()->user()->canDeleteActivity($pack->user_id))
+                                                        <button class="btn btn-sm btn-danger btn-delete-packing" data-id="{{ $pack->id }}">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    @endif
+                                                </td>
+                                            </tr>
                                         @empty
-                                        <tr id="noPackingData">
-                                            <td colspan="6" class="text-center">Belum ada data packing</td>
-                                        </tr>
+                                            <tr id="noPackingData">
+                                                <td colspan="7" class="text-center text-muted">Belum ada data packing</td>
+                                            </tr>
                                         @endforelse
                                     </tbody>
                                 </table>
@@ -199,206 +168,135 @@
         </div>
     </div>
 </div>
-@endsection
 
 @push('scripts')
 <script>
-    $(document).ready(function() {
-        let igiId = null;
-        let timeIntervalId = null;
-
-        function updatePackingTime() {
-            const now = new Date();
-            const formatted = now.toLocaleString('id-ID', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            $('#waktuPacking').val(formatted);
+$(document).ready(function() {
+    // Tab State Persistence
+    const tabKey = 'packingActiveTab';
+    const savedTab = localStorage.getItem(tabKey);
+    
+    if (savedTab) {
+        const tabElement = document.querySelector(`button[data-bs-target="${savedTab}"]`);
+        if (tabElement) {
+            new bootstrap.Tab(tabElement).show();
         }
-
-        $('#serialNumberPacking').on('keypress', function(e) {
-            if (e.which === 13) {
-                e.preventDefault();
-                checkSerialNumberPacking();
-            }
+    }
+    
+    document.querySelectorAll('#packingTabs button[data-bs-toggle="tab"]').forEach(button => {
+        button.addEventListener('shown.bs.tab', function (e) {
+            localStorage.setItem(tabKey, e.target.getAttribute('data-bs-target'));
         });
+    });
 
-        function checkSerialNumberPacking() {
-            const serialNumber = $('#serialNumberPacking').val().trim();
+    // Auto-focus when switching to scanning tab
+    $('button[data-bs-target="#scanning"]').on('shown.bs.tab', function() {
+        $('#serialNumberPacking').focus();
+    });
 
+    let igiDetailId = null;
+
+    // Scan dan Submit Langsung
+    $('#serialNumberPacking').on('keypress', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            const serialNumber = $(this).val().trim();
+            
             if (!serialNumber) {
-                alert('Serial Number tidak boleh kosong!');
+                alert('Serial number tidak boleh kosong!');
                 return;
             }
 
+            // Check Serial
             $.ajax({
                 url: '{{ route("packing.check-serial") }}',
                 method: 'POST',
-                data: {
-                    serial_number: serialNumber
-                },
+                data: { serial_number: serialNumber },
                 success: function(response) {
                     if (response.success) {
-                        igiId = response.data.igi_id;
-                        $('#namaBarangPacking').val(response.data.nama_barang);
-                        $('#typePacking').val(response.data.type);
-                        updatePackingTime();
-
-                        // Clear interval lama jika ada
-                        if (timeIntervalId) clearInterval(timeIntervalId);
-                        // Set interval baru
-                        timeIntervalId = setInterval(updatePackingTime, 1000);
-
-                        $('#autoFillPacking').slideDown();
+                        igiDetailId = response.data.id;
+                        submitPacking();
                     }
                 },
                 error: function(xhr) {
-                    const response = xhr.responseJSON;
-                    alert(response.message || 'Serial Number tidak valid!');
+                    alert(xhr.responseJSON?.message || 'Serial Number tidak valid!');
                     $('#serialNumberPacking').val('').focus();
-                    $('#autoFillPacking').slideUp();
-                    igiId = null;
-                    if (timeIntervalId) clearInterval(timeIntervalId);
                 }
             });
         }
+    });
 
-        $('#packingForm').on('submit', function(e) {
-            e.preventDefault();
+    function submitPacking() {
+        $.ajax({
+            url: '{{ route("packing.store") }}',
+            method: 'POST',
+            data: { igi_detail_id: igiDetailId },
+            success: function(response) {
+                if (response.success) {
+                    const data = response.data;
+                    const deleteBtn = data.can_delete ? `
+                        <button class="btn btn-sm btn-danger btn-delete-packing" data-id="${data.id}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    ` : '';
 
-            const formData = {
-                igi_id: igiId
-            };
-
-            $.ajax({
-                url: '{{ route("packing.store") }}',
-                method: 'POST',
-                data: formData,
-                success: function(response) {
-                    if (response.success) {
-                        const data = response.data;
-                        const waktu = new Date(data.waktu_packing).toLocaleString('id-ID');
-
-                        const newRow = `
+                    const row = `
                         <tr id="packing-row-${data.id}">
-                            <td>${waktu}</td>
+                            <td>${data.packing_time}</td>
                             <td><code>${data.serial_number}</code></td>
-                            <td>${data.nama_barang}</td>
+                            <td>${data.jenis}</td>
+                            <td>${data.merk}</td>
                             <td>${data.type}</td>
-                            <td><span class="badge bg-success"><i class="bi bi-check-circle"></i> PACKED</span></td>
-                            <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-warning btn-rollback-packing" 
-                                            data-id="${data.id}" 
-                                            title="Rollback ke Rekondisi">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-fulldelete-packing" 
-                                            data-id="${data.id}" 
-                                            title="Hapus dari semua proses">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
+                            <td>${data.user_name}</td>
+                            <td>${deleteBtn}</td>
                         </tr>
                     `;
-
-                        $('#noPackingData').remove();
-                        $('#packingTableBody').prepend(newRow);
-
-                        $('#packingForm')[0].reset();
-                        $('#autoFillPacking').slideUp();
-                        $('#serialNumberPacking').focus();
-                        if (timeIntervalId) clearInterval(timeIntervalId);
-                        igiId = null;
-
-                        alert('✅ Data packing berhasil disimpan!\nBarang siap untuk dikirim.');
-                    }
-                },
-                error: function(xhr) {
-                    const response = xhr.responseJSON;
-                    alert(response.message || 'Terjadi kesalahan!');
-                }
-            });
-        });
-
-        // Cleanup saat form atau tab hide
-        $('#packingForm').on('reset', function() {
-            if (timeIntervalId) clearInterval(timeIntervalId);
-        });
-
-        $('a[data-bs-toggle="tab"]').on('hide.bs.tab', function() {
-            if (timeIntervalId) clearInterval(timeIntervalId);
-        });
-
-        // Cleanup saat page unload
-        $(window).on('beforeunload', function() {
-            if (timeIntervalId) clearInterval(timeIntervalId);
-        });
-    });
-
-    // Rollback
-    $(document).on('click', '.btn-rollback-packing', function() {
-        const id = $(this).data('id');
-
-        if (!confirm('Yakin ingin rollback data ini ke Rekondisi?')) {
-            return;
-        }
-
-        $.ajax({
-            url: `/packing/${id}/rollback`,
-            method: 'POST',
-            success: function(response) {
-                if (response.success) {
-                    $(`#packing-row-${id}`).fadeOut(300, function() {
-                        $(this).remove();
-                        if ($('#packingTableBody tr').length === 0) {
-                            $('#packingTableBody').html('<tr id="noPackingData"><td colspan="6" class="text-center">Belum ada data packing</td></tr>');
-                        }
-                    });
-                    alert('✓ Data berhasil di-rollback ke Rekondisi!');
+                    
+                    $('#noPackingData').remove();
+                    $('#packingTableBody').prepend(row);
+                    $('#serialNumberPacking').val('').focus();
+                    
+                    console.log('✓ Packing berhasil disimpan - Barang siap dikirim!');
                 }
             },
             error: function(xhr) {
-                alert(xhr.responseJSON?.message || 'Gagal melakukan rollback!');
+                alert(xhr.responseJSON?.message || 'Error menyimpan data!');
+                $('#serialNumberPacking').val('').focus();
             }
         });
-    });
-
-    // Full Delete
-    $(document).on('click', '.btn-fulldelete-packing', function() {
-        const id = $(this).data('id');
-
-        if (!confirm('⚠️ PERINGATAN: Ini akan menghapus data dari SEMUA proses!\n\nYakin untuk melanjutkan?')) {
-            return;
-        }
-
-        $.ajax({
-            url: `/packing/${id}/full-delete`,
-            method: 'POST',
-            success: function(response) {
-                if (response.success) {
-                    $(`#packing-row-${id}`).fadeOut(300, function() {
-                        $(this).remove();
-                        if ($('#packingTableBody tr').length === 0) {
-                            $('#packingTableBody').html('<tr id="noPackingData"><td colspan="6" class="text-center">Belum ada data packing</td></tr>');
-                        }
-                    });
-                    alert('✓ Data berhasil dihapus dari semua proses!');
-                }
-            },
-            error: function(xhr) {
-                alert(xhr.responseJSON?.message || 'Gagal menghapus data!');
-            }
-        });
-    });
-
-    function refreshPackingTable() {
-        location.reload();
     }
+
+    // Delete Packing
+    $(document).on('click', '.btn-delete-packing', function() {
+        const id = $(this).data('id');
+        
+        if (!confirm('Yakin ingin menghapus data packing ini?\n\nData akan dikembalikan ke proses sebelumnya.')) {
+            return;
+        }
+
+        $.ajax({
+            url: `/packing/${id}`,
+            method: 'DELETE',
+            success: function(response) {
+                if (response.success) {
+                    $(`#packing-row-${id}`).fadeOut(300, function() {
+                        $(this).remove();
+                        
+                        // Check if table is empty
+                        if ($('#packingTableBody tr').length === 0) {
+                            $('#packingTableBody').html('<tr id="noPackingData"><td colspan="7" class="text-center text-muted">Belum ada data packing</td></tr>');
+                        }
+                    });
+                    alert(response.message);
+                    $('#serialNumberPacking').focus();
+                }
+            },
+            error: function(xhr) {
+                alert(xhr.responseJSON?.message || 'Error menghapus data!');
+            }
+        });
+    });
+});
 </script>
 @endpush
+@endsection

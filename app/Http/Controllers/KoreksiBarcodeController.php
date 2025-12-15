@@ -1,6 +1,5 @@
 <?php
 // app/Http/Controllers/KoreksiBarcodeController.php
-
 namespace App\Http\Controllers;
 
 use App\Models\IgiDetail;
@@ -24,8 +23,8 @@ class KoreksiBarcodeController extends Controller
         ]);
 
         $detail = IgiDetail::with(['bapb', 'scanner'])
-                           ->where('serial_number', $request->serial_number)
-                           ->first();
+            ->where('serial_number', $request->serial_number)
+            ->first();
 
         if (!$detail) {
             return response()->json([
@@ -56,22 +55,23 @@ class KoreksiBarcodeController extends Controller
     {
         $detail = IgiDetail::findOrFail($id);
         $user = $request->user();
+
         $activities = $detail->activityLogs()
-                             ->with('user')
-                             ->orderBy('tanggal', 'desc')
-                             ->get()
-                             ->map(function($activity) use ($user) {
-                                 return [
-                                     'id' => $activity->id,
-                                     'aktivitas' => $activity->aktivitas,
-                                     'tanggal' => $activity->tanggal->format('d-m-Y H:i:s'),
-                                     'result' => $activity->result,
-                                     'user_name' => $activity->user->name,
-                                     'user_id' => $activity->user_id,
-                                     'can_delete' => $user?->canDeleteActivity($activity->user_id) ?? false,
-                                     'keterangan' => $activity->keterangan
-                                 ];
-                             });
+            ->with('user')
+            ->orderBy('tanggal', 'desc')
+            ->get()
+            ->map(function($activity) use ($user) {
+                return [
+                    'id' => $activity->id,
+                    'aktivitas' => $activity->aktivitas,
+                    'tanggal' => $activity->tanggal->format('d-m-Y H:i:s'),
+                    'result' => $activity->result,
+                    'user_name' => $activity->user->name,
+                    'user_id' => $activity->user_id,
+                    'can_delete' => $user?->canDeleteActivity($activity->user_id) ?? false,
+                    'keterangan' => $activity->keterangan
+                ];
+            });
 
         return response()->json([
             'success' => true,
@@ -94,6 +94,14 @@ class KoreksiBarcodeController extends Controller
         try {
             $detail = IgiDetail::findOrFail($id);
 
+            // Validasi STB ID: wajib untuk STB, harus kosong untuk selain STB
+            if ($request->jenis === 'STB' && empty($request->stb_id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'STB ID wajib diisi untuk jenis STB!'
+                ], 400);
+            }
+
             // Simpan data lama untuk log
             $dataLama = [
                 'mac_address' => $detail->mac_address,
@@ -108,7 +116,7 @@ class KoreksiBarcodeController extends Controller
                 'jenis' => $request->jenis,
                 'merk' => $request->merk,
                 'type' => $request->type,
-                'stb_id' => $request->stb_id
+                'stb_id' => $request->jenis === 'STB' ? $request->stb_id : null
             ];
 
             // Check apakah ada perubahan
@@ -140,7 +148,6 @@ class KoreksiBarcodeController extends Controller
                 'success' => true,
                 'message' => 'Data berhasil diperbarui!'
             ]);
-
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
@@ -169,7 +176,15 @@ class KoreksiBarcodeController extends Controller
             $detail = $activity->igiDetail;
             $aktivitasType = $activity->aktivitas;
 
-            // Hapus record terkait
+            // Validasi: hanya bisa hapus jika ini aktivitas terakhir
+            if ($detail->status_proses !== $aktivitasType) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak bisa hapus! Ini bukan aktivitas terakhir. Status barang saat ini: ' . $detail->status_proses
+                ], 403);
+            }
+
+            // Hapus record terkait berdasarkan aktivitas
             switch ($aktivitasType) {
                 case 'UJI_FUNGSI':
                     $detail->ujiFungsi()->where('user_id', $activity->user_id)->delete();
@@ -181,15 +196,19 @@ class KoreksiBarcodeController extends Controller
                     break;
                 case 'REKONDISI':
                     $detail->rekondisi()->where('user_id', $activity->user_id)->delete();
-                    $detail->updateStatusProses('REPAIR');
+                    // Kembali ke status sebelumnya
+                    $previousStatus = $detail->getPreviousStatus();
+                    $detail->updateStatusProses($previousStatus);
                     break;
                 case 'SERVICE_HANDLING':
                     $detail->serviceHandling()->where('user_id', $activity->user_id)->delete();
-                    $detail->updateStatusProses('REKONDISI');
+                    $previousStatus = $detail->getPreviousStatus();
+                    $detail->updateStatusProses($previousStatus);
                     break;
                 case 'PACKING':
                     $detail->packing()->where('user_id', $activity->user_id)->delete();
-                    $detail->updateStatusProses('REKONDISI');
+                    $previousStatus = $detail->getPreviousStatus();
+                    $detail->updateStatusProses($previousStatus);
                     break;
             }
 
@@ -202,7 +221,6 @@ class KoreksiBarcodeController extends Controller
                 'success' => true,
                 'message' => 'Aktivitas berhasil dihapus!'
             ]);
-
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([

@@ -1,5 +1,4 @@
 <?php
-
 // app/Http/Controllers/ServiceHandlingController.php
 namespace App\Http\Controllers;
 
@@ -15,8 +14,9 @@ class ServiceHandlingController extends Controller
     {
         $monitoring = $this->getMonitoring();
         $services = ServiceHandling::with(['igiDetail.bapb', 'user'])
-                                     ->orderBy('service_time', 'desc')
-                                     ->paginate(20);
+            ->orderBy('service_time', 'desc')
+            ->paginate(20);
+
         return view('service-handling.index', compact('monitoring', 'services'));
     }
 
@@ -39,9 +39,11 @@ class ServiceHandlingController extends Controller
     public function checkSerial(Request $request)
     {
         $detail = IgiDetail::where('serial_number', $request->serial_number)->first();
+
         if (!$detail) {
             return response()->json(['success' => false, 'message' => 'Serial Number tidak ditemukan!'], 404);
         }
+
         return response()->json(['success' => true, 'data' => [
             'id' => $detail->id,
             'jenis' => $detail->jenis,
@@ -56,7 +58,7 @@ class ServiceHandlingController extends Controller
         DB::beginTransaction();
         try {
             $detail = IgiDetail::findOrFail($request->igi_detail_id);
-            
+
             $service = ServiceHandling::create([
                 'igi_detail_id' => $detail->id,
                 'service_time' => Carbon::now(),
@@ -65,11 +67,24 @@ class ServiceHandlingController extends Controller
             ]);
 
             $detail->updateStatusProses('SERVICE_HANDLING');
-            $detail->logActivity('SERVICE_HANDLING', 'NOK', Auth::id());
+            $detail->logActivity('SERVICE_HANDLING', 'N/A', Auth::id());
 
             DB::commit();
-            return response()->json(['success' => true, 'message' => 'Service Handling berhasil!', 
-                                     'data' => $service->load(['igiDetail.bapb', 'user'])]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service Handling berhasil!',
+                'data' => [
+                    'id' => $service->id,
+                    'service_time' => $service->service_time->format('d-m-Y H:i:s'),
+                    'serial_number' => $detail->serial_number,
+                    'jenis' => $detail->jenis,
+                    'merk' => $detail->merk,
+                    'type' => $detail->type,
+                    'user_name' => $service->user->name,
+                    'can_delete' => true
+                ]
+            ]);
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -82,16 +97,25 @@ class ServiceHandlingController extends Controller
         try {
             $user = $request->user();
             $service = ServiceHandling::with('igiDetail')->findOrFail($id);
-            
+
             if (!$user || !$user->canDeleteActivity($service->user_id)) {
                 return response()->json(['success' => false, 'message' => 'Tidak ada izin!'], 403);
             }
 
+            // Check: harus proses terakhir
+            if ($service->igiDetail->status_proses !== 'SERVICE_HANDLING') {
+                return response()->json(['success' => false, 'message' => 'Tidak bisa hapus! Barang sudah masuk proses berikutnya.'], 403);
+            }
+
             $service->delete();
-            $service->igiDetail->updateStatusProses('REKONDISI');
+            
+            // Kembalikan ke status sebelumnya
+            $previousStatus = $service->igiDetail->getPreviousStatus();
+            $service->igiDetail->updateStatusProses($previousStatus);
             $service->igiDetail->activityLogs()->where('aktivitas', 'SERVICE_HANDLING')->delete();
 
             DB::commit();
+
             return response()->json(['success' => true, 'message' => 'Berhasil dihapus!']);
         } catch (\Exception $e) {
             DB::rollback();

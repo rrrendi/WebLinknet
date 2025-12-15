@@ -1,6 +1,5 @@
 <?php
 // app/Http/Controllers/UjiFungsiController.php
-
 namespace App\Http\Controllers;
 
 use App\Models\UjiFungsi;
@@ -16,11 +15,11 @@ class UjiFungsiController extends Controller
     public function index()
     {
         $monitoring = $this->getMonitoringData();
-        
+
         // Recent tests untuk TAB 2
         $recentTests = UjiFungsi::with(['igiDetail.bapb', 'user'])
-                                ->orderBy('uji_fungsi_time', 'desc')
-                                ->paginate(20);
+            ->orderBy('uji_fungsi_time', 'desc')
+            ->paginate(20);
 
         return view('uji-fungsi.index', compact('monitoring', 'recentTests'));
     }
@@ -152,9 +151,18 @@ class UjiFungsiController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Uji Fungsi berhasil disimpan!',
-                'data' => $ujiFungsi->load(['igiDetail.bapb', 'user'])
+                'data' => [
+                    'id' => $ujiFungsi->id,
+                    'uji_fungsi_time' => $ujiFungsi->uji_fungsi_time->format('d-m-Y H:i:s'),
+                    'serial_number' => $detail->serial_number,
+                    'jenis' => $detail->jenis,
+                    'merk' => $detail->merk,
+                    'type' => $detail->type,
+                    'result' => $ujiFungsi->result,
+                    'user_name' => $ujiFungsi->user->name,
+                    'can_delete' => true
+                ]
             ]);
-
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
@@ -164,8 +172,8 @@ class UjiFungsiController extends Controller
         }
     }
 
-    // Delete Uji Fungsi (hanya jika tidak ada proses lanjutan)
-    public function destroy(request $request, $id)
+    // Delete Uji Fungsi (hanya jika ini adalah proses terakhir)
+    public function destroy(Request $request, $id)
     {
         DB::beginTransaction();
         try {
@@ -181,13 +189,11 @@ class UjiFungsiController extends Controller
                 ], 403);
             }
 
-            // Check jika ada proses lanjutan
-            if ($detail->repair()->exists() || 
-                $detail->rekondisi()->exists() || 
-                $detail->serviceHandling()->exists()) {
+            // Check: harus proses terakhir (status_proses harus UJI_FUNGSI)
+            if ($detail->status_proses !== 'UJI_FUNGSI') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak bisa hapus. Sudah ada proses lanjutan!'
+                    'message' => 'Tidak bisa hapus! Barang sudah masuk proses berikutnya: ' . $detail->status_proses
                 ], 403);
             }
 
@@ -206,7 +212,6 @@ class UjiFungsiController extends Controller
                 'success' => true,
                 'message' => 'Data Uji Fungsi berhasil dihapus!'
             ]);
-
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([

@@ -24,7 +24,9 @@ Route::get('/', function () {
 // AUTH ROUTES - Authenticated & Active User
 Route::middleware(['auth', 'active'])->group(function () {
     
+    // ==========================================
     // DASHBOARD
+    // ==========================================
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // ==========================================
@@ -41,6 +43,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Edit BAPB Header
         Route::get('/{id}/edit', [IgiController::class, 'edit'])->name('edit');
         Route::put('/{id}', [IgiController::class, 'update'])->name('update');
+        
+        // Delete BAPB Header
+        Route::delete('/{id}', [IgiController::class, 'destroy'])->name('destroy');
         
         // Scan Detail Barang
         Route::get('/{bapbId}/scan', [IgiController::class, 'scanDetail'])->name('scan-detail');
@@ -90,7 +95,6 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/check-serial', [ServiceHandlingController::class, 'checkSerial'])->name('check-serial');
         Route::post('/store', [ServiceHandlingController::class, 'store'])->name('store');
         Route::delete('/{id}', [ServiceHandlingController::class, 'destroy'])->name('destroy');
-        Route::get('/nok-data', [ServiceHandlingController::class, 'nokData'])->name('nok-data');
     });
 
     // ==========================================
