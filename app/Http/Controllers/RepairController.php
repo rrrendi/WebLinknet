@@ -29,14 +29,14 @@ class RepairController extends Controller
 
         foreach ($pemilikList as $pemilik) {
             foreach ($jenisList as $jenis) {
-                $ok = Repair::whereHas('igiDetail', function($q) use ($pemilik, $jenis) {
-                    $q->whereHas('bapb', function($q2) use ($pemilik) {
+                $ok = Repair::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
+                    $q->whereHas('bapb', function ($q2) use ($pemilik) {
                         $q2->where('pemilik', $pemilik);
                     })->where('jenis', $jenis);
                 })->where('result', 'OK')->count();
 
-                $nok = Repair::whereHas('igiDetail', function($q) use ($pemilik, $jenis) {
-                    $q->whereHas('bapb', function($q2) use ($pemilik) {
+                $nok = Repair::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
+                    $q->whereHas('bapb', function ($q2) use ($pemilik) {
                         $q2->where('pemilik', $pemilik);
                     })->where('jenis', $jenis);
                 })->where('result', 'NOK')->count();
@@ -93,6 +93,30 @@ class RepairController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Serial Number sudah pernah di Repair!'
+            ], 400);
+        }
+
+        // 2. Tidak boleh jika sudah Rekondisi
+        if ($detail->rekondisi()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Barang sudah Rekondisi, tidak bisa dilakukan Repair!'
+            ], 400);
+        }
+
+        // 3. Tidak boleh jika sudah Service Handling
+        if ($detail->serviceHandling()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Barang sudah masuk Service Handling, tidak bisa dilakukan Repair!'
+            ], 400);
+        }
+
+        // 4. Tidak boleh jika sudah Packing
+        if ($detail->packing()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Barang sudah di Packing, tidak bisa dilakukan Repair!'
             ], 400);
         }
 

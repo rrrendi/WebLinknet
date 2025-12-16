@@ -25,9 +25,9 @@ class PackingController extends Controller
         $data = [];
         foreach (['Linknet', 'Telkomsel'] as $pemilik) {
             foreach (['STB', 'ONT', 'ROUTER'] as $jenis) {
-                $count = Packing::whereHas('igiDetail', function($q) use ($pemilik, $jenis) {
+                $count = Packing::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
                     $q->whereHas('bapb', fn($q2) => $q2->where('pemilik', $pemilik))
-                      ->where('jenis', $jenis);
+                        ->where('jenis', $jenis);
                 })->count();
                 $data[$pemilik][$jenis] = $count;
             }
@@ -47,6 +47,14 @@ class PackingController extends Controller
         // Harus sudah rekondisi
         if (!$detail->rekondisi()->exists()) {
             return response()->json(['success' => false, 'message' => 'Packing hanya untuk barang yang sudah Rekondisi!'], 400);
+        }
+
+        // Validasi: barang sedang / sudah di Service Handling
+        if ($detail->serviceHandling()->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Barang masih berada di Service Handling, tidak bisa dilakukan Packing!'
+            ], 400);
         }
 
         // Validasi: belum pernah di Packing
@@ -122,7 +130,7 @@ class PackingController extends Controller
             }
 
             $packing->delete();
-            
+
             // Kembalikan ke status sebelumnya
             $previousStatus = $packing->igiDetail->getPreviousStatus();
             $packing->igiDetail->updateStatusProses($previousStatus);
