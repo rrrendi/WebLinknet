@@ -25,9 +25,9 @@ class ServiceHandlingController extends Controller
         $data = [];
         foreach (['Linknet', 'Telkomsel'] as $pemilik) {
             foreach (['STB', 'ONT', 'ROUTER'] as $jenis) {
-                $count = ServiceHandling::whereHas('igiDetail', function($q) use ($pemilik, $jenis) {
+                $count = ServiceHandling::whereHas('igiDetail', function ($q) use ($pemilik, $jenis) {
                     $q->whereHas('bapb', fn($q2) => $q2->where('pemilik', $pemilik))
-                      ->where('jenis', $jenis);
+                        ->where('jenis', $jenis);
                 })->count();
                 $data[$pemilik][$jenis] = $count;
             }
@@ -51,6 +51,24 @@ class ServiceHandlingController extends Controller
                 'message' => 'Serial Number sudah pernah di Service Handling!'
             ], 400);
         }
+
+        // Ambil data terakhir uji fungsi
+        $lastUjiFungsi = $detail->ujiFungsi()->latest()->first();
+
+        // Ambil data terakhir repair
+        $lastRepair = $detail->repair()->latest()->first();
+
+        // Validasi: harus Uji Fungsi NOK atau Repair NOK
+        if (
+            (!$lastUjiFungsi || $lastUjiFungsi->result !== 'NOK') &&
+            (!$lastRepair || $lastRepair->result !== 'NOK')
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Service Handling hanya untuk barang dengan Uji Fungsi NOK atau Repair NOK!'
+            ], 400);
+        }
+
 
         return response()->json(['success' => true, 'data' => [
             'id' => $detail->id,
@@ -116,7 +134,7 @@ class ServiceHandlingController extends Controller
             }
 
             $service->delete();
-            
+
             // Kembalikan ke status sebelumnya
             $previousStatus = $service->igiDetail->getPreviousStatus();
             $service->igiDetail->updateStatusProses($previousStatus);
