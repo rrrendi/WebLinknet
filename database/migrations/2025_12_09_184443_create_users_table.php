@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('password');
             
             // ROLE SYSTEM
-            $table->enum('role', ['admin', 'user'])->default('user')->index();
+            $table->enum('role', ['admin', 'user', 'tamu'])->default('user')->index();
             // admin: full access + create user
             // user: semua akses kecuali create user
             

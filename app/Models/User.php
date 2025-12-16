@@ -1,4 +1,5 @@
 <?php
+// app/Models/User.php
 
 namespace App\Models;
 
@@ -32,7 +33,10 @@ class User extends Authenticatable
         ];
     }
 
-    // ROLE METHODS
+    // ========================================
+    // ROLE CHECKER METHODS
+    // ========================================
+    
     public function isAdmin(): bool
     {
         return $this->role === 'admin';
@@ -41,6 +45,12 @@ class User extends Authenticatable
     public function isUser(): bool
     {
         return $this->role === 'user';
+    }
+
+    // ⭐ TAMBAH INI
+    public function isTamu(): bool
+    {
+        return $this->role === 'tamu';
     }
 
     public function canCreateUser(): bool
@@ -53,10 +63,37 @@ class User extends Authenticatable
         return $this->id === $activityUserId;
     }
 
+    // ⭐ TAMBAH INI - Cek apakah bisa akses modul tertentu
+    public function canAccessIgi(): bool
+    {
+        return in_array($this->role, ['admin', 'user']);
+    }
+
+    public function canAccessDownload(): bool
+    {
+        return true; // Semua role bisa download
+    }
+
     // SCOPES
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeAdmins($query)
+    {
+        return $query->where('role', 'admin');
+    }
+
+    public function scopeRegularUsers($query)
+    {
+        return $query->where('role', 'user');
+    }
+
+    // ⭐ TAMBAH INI
+    public function scopeTamu($query)
+    {
+        return $query->where('role', 'tamu');
     }
 
     // RELATIONSHIPS

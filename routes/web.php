@@ -21,14 +21,35 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-// AUTH ROUTES - Authenticated & Active User
+// ========================================
+// ROUTES UNTUK SEMUA AUTHENTICATED USER (termasuk Tamu)
+// ========================================
 Route::middleware(['auth', 'active'])->group(function () {
     
-    // ==========================================
-    // DASHBOARD
-    // ==========================================
+    // DASHBOARD - Semua role bisa akses
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // DOWNLOAD DATA - Semua role bisa akses
+    Route::prefix('download')->name('download.')->group(function () {
+        Route::get('/', [DownloadController::class, 'index'])->name('index');
+        Route::post('/export', [DownloadController::class, 'export'])->name('export');
+        Route::get('/wilayah-by-pemilik', [DownloadController::class, 'getWilayahByPemilik'])->name('wilayah-by-pemilik');
+    });
+
+    // PROFILE - Semua role bisa akses
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+        Route::patch('/', [ProfileController::class, 'update'])->name('update');
+        Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+    });
+
+});
+
+// ========================================
+// ROUTES UNTUK ADMIN & USER ONLY (BLOK TAMU)
+// ========================================
+Route::middleware(['auth', 'active', 'not.tamu'])->group(function () {
+    
     // ==========================================
     // IGI ROUTES
     // ==========================================
@@ -39,6 +60,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         // Create BAPB Header
         Route::get('/create', [IgiController::class, 'create'])->name('create');
         Route::post('/store-bapb', [IgiController::class, 'storeBapb'])->name('store-bapb');
+        
+        // Confirm BAPB
+        Route::get('/{bapbId}/confirm', [IgiController::class, 'confirmBapb'])->name('confirm-bapb');
         
         // Edit BAPB Header
         Route::get('/{id}/edit', [IgiController::class, 'edit'])->name('edit');
@@ -118,28 +142,17 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::delete('/activity/{id}', [KoreksiBarcodeController::class, 'deleteActivity'])->name('delete-activity');
     });
 
-    // ==========================================
-    // DOWNLOAD DATA ROUTES
-    // ==========================================
-    Route::prefix('download')->name('download.')->group(function () {
-        Route::get('/', [DownloadController::class, 'index'])->name('index');
-        Route::post('/export', [DownloadController::class, 'export'])->name('export');
-        Route::get('/wilayah-by-pemilik', [DownloadController::class, 'getWilayahByPemilik'])->name('wilayah-by-pemilik');
-    });
+});
 
-    // ==========================================
-    // PROFILE ROUTES
-    // ==========================================
-    Route::prefix('profile')->name('profile.')->group(function () {
-        Route::get('/', [ProfileController::class, 'edit'])->name('edit');
-        Route::patch('/', [ProfileController::class, 'update'])->name('update');
-        Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
-    });
-
+// ========================================
+// ADMIN ONLY ROUTES
+// ========================================
+Route::middleware(['auth', 'active', 'admin'])->group(function () {
+    
     // ==========================================
     // USER MANAGEMENT ROUTES (ADMIN ONLY)
     // ==========================================
-    Route::middleware('admin')->prefix('users')->name('users.')->group(function () {
+    Route::prefix('users')->name('users.')->group(function () {
         Route::get('/', [UserManagementController::class, 'index'])->name('index');
         Route::get('/create', [UserManagementController::class, 'create'])->name('create');
         Route::post('/', [UserManagementController::class, 'store'])->name('store');
@@ -147,6 +160,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::put('/{id}', [UserManagementController::class, 'update'])->name('update');
         Route::delete('/{id}', [UserManagementController::class, 'destroy'])->name('destroy');
     });
+    
 });
 
 // Include auth routes (login, register, etc)

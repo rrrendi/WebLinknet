@@ -417,30 +417,46 @@
             <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
+
+            {{-- Menu ini HANYA untuk Admin & User --}}
+            @if(auth()->user()->canAccessIgi())
+
             <a class="nav-link {{ request()->is('igi*') ? 'active' : '' }}" href="{{ route('igi.index') }}">
                 <i class="bi bi-inbox"></i> IGI
             </a>
-            <a class="nav-link {{ request()->is('koreksi-barcode*') ? 'active' : '' }}" href="{{ route('koreksi-barcode.index') }}">
-                <i class="bi bi-pencil-square"></i> Koreksi Barcode
-            </a>
+
             <a class="nav-link {{ request()->is('uji-fungsi*') ? 'active' : '' }}" href="{{ route('uji-fungsi.index') }}">
                 <i class="bi bi-check-circle"></i> Uji Fungsi
             </a>
+
             <a class="nav-link {{ request()->is('repair*') ? 'active' : '' }}" href="{{ route('repair.index') }}">
                 <i class="bi bi-tools"></i> Repair
             </a>
+
             <a class="nav-link {{ request()->is('rekondisi*') ? 'active' : '' }}" href="{{ route('rekondisi.index') }}">
                 <i class="bi bi-arrow-clockwise"></i> Rekondisi
             </a>
+
             <a class="nav-link {{ request()->is('service-handling*') ? 'active' : '' }}" href="{{ route('service-handling.index') }}">
                 <i class="bi bi-wrench"></i> Service Handling
             </a>
+
             <a class="nav-link {{ request()->is('packing*') ? 'active' : '' }}" href="{{ route('packing.index') }}">
                 <i class="bi bi-box"></i> Packing
             </a>
+
+            <a class="nav-link {{ request()->is('koreksi-barcode*') ? 'active' : '' }}" href="{{ route('koreksi-barcode.index') }}">
+                <i class="bi bi-pencil-square"></i> Koreksi Barcode
+            </a>
+
+            @endif
+
+            {{-- Download Data - SEMUA role bisa akses --}}
             <a class="nav-link {{ request()->is('download*') ? 'active' : '' }}" href="{{ route('download.index') }}">
                 <i class="bi bi-download"></i> Download Data
             </a>
+
+            {{-- User Management - HANYA Admin --}}
             @if(auth()->user()->isAdmin())
             <a class="nav-link {{ request()->is('users*') ? 'active' : '' }}" href="{{ route('users.index') }}">
                 <i class="bi bi-people"></i> User Management
@@ -476,8 +492,8 @@
                         <i class="bi bi-moon-stars-fill theme-icon theme-icon-moon"></i>
                     </button>
 
-                    <span class="badge bg-{{ auth()->user()->isAdmin() ? 'danger' : 'primary' }} me-2">
-                        {{ auth()->user()->isAdmin() ? 'ADMIN' : 'USER' }}
+                    <span class="badge bg-{{ auth()->user()->isAdmin() ? 'danger' : (auth()->user()->isTamu() ? 'warning' : 'primary') }} me-2">
+                        {{ strtoupper(auth()->user()->role) }}
                     </span>
                     <span class="me-3">
                         <i class="bi bi-person-circle"></i> {{ auth()->user()->name }}

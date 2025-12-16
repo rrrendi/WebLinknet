@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => \App\Http\Middleware\CheckActiveUser::class,
             'admin' => \App\Http\Middleware\CheckAdminRole::class,
+            'not.tamu' => \App\Http\Middleware\CheckNotTamu::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -13,42 +13,57 @@
                     <form action="{{ route('users.update', $user->id) }}" method="POST">
                         @csrf
                         @method('PUT')
-                        
+
                         <div class="mb-3">
                             <label class="form-label">Nama Lengkap</label>
-                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" 
-                                   value="{{ old('name', $user->name) }}" required>
+                            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
+                                value="{{ old('name', $user->name) }}" required>
                             @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        
+
                         <div class="mb-3">
                             <label class="form-label">Email</label>
-                            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror" 
-                                   value="{{ old('email', $user->email) }}" required>
+                            <input type="email" name="email" class="form-control @error('email') is-invalid @enderror"
+                                value="{{ old('email', $user->email) }}" required>
                             @error('email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        
+
                         <div class="mb-3">
                             <label class="form-label">Password Baru (Kosongkan jika tidak diubah)</label>
                             <input type="password" name="password" class="form-control @error('password') is-invalid @enderror">
                             @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             <small class="text-muted">Minimal 6 karakter jika diisi</small>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label class="form-label">Konfirmasi Password Baru</label>
                             <input type="password" name="password_confirmation" class="form-control">
                         </div>
-                        
+
                         <div class="mb-3">
-                            <label class="form-label">Role</label>
+                            <label class="form-label">Role <span class="text-danger">*</span></label>
                             <select name="role" class="form-select @error('role') is-invalid @enderror" required>
-                                <option value="user" {{ $user->role === 'user' ? 'selected' : '' }}>User</option>
-                                <option value="admin" {{ $user->role === 'admin' ? 'selected' : '' }}>Admin</option>
+                                <option value="user" {{ old('role', $user->role ?? 'user') === 'user' ? 'selected' : '' }}>
+                                    User (Full Access kecuali User Management)
+                                </option>
+                                <option value="admin" {{ old('role', $user->role ?? '') === 'admin' ? 'selected' : '' }}>
+                                    Admin (Full Access + Create User)
+                                </option>
+                                <option value="tamu" {{ old('role', $user->role ?? '') === 'tamu' ? 'selected' : '' }}>
+                                    Tamu (Dashboard & Download Only)
+                                </option>
                             </select>
                             @error('role')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-                        
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Role:</strong><br>
+                            • <strong>Admin:</strong> Full access + dapat membuat user<br>
+                            • <strong>User:</strong> Full access kecuali user management<br>
+                            • <strong>Tamu:</strong> Hanya Dashboard & Download Data
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label">Status</label>
                             <select name="is_active" class="form-select @error('is_active') is-invalid @enderror" required>
@@ -58,7 +73,7 @@
                             @error('is_active')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             <small class="text-muted">User yang inactive tidak bisa login</small>
                         </div>
-                        
+
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-warning">
                                 <i class="bi bi-save"></i> Update User
