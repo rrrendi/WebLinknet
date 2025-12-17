@@ -18,7 +18,7 @@
                     <strong>Tanggal Datang:</strong> {{ $bapb->tanggal_datang->format('d-m-Y') }}
                 </div>
                 <div class="col-md-3">
-                    <strong>Progress:</strong> 
+                    <strong>Progress:</strong>
                     <span class="badge bg-warning text-dark">{{ $bapb->total_scan }} / {{ $bapb->jumlah }}</span>
                 </div>
             </div>
@@ -35,7 +35,7 @@
                 <div class="card-body">
                     <form id="scanForm">
                         <input type="hidden" id="bapbId" value="{{ $bapb->id }}">
-                        
+
                         <!-- Jenis, Merk, Type -->
                         <div class="mb-3">
                             <label class="form-label">Jenis <span class="text-danger">*</span></label>
@@ -49,16 +49,18 @@
 
                         <div class="mb-3">
                             <label class="form-label">Merk <span class="text-danger">*</span></label>
-                            <select id="merk" class="form-select" required disabled>
-                                <option value="">Pilih Merk</option>
-                            </select>
+                            <input type="text" id="merk" class="form-control"
+                                placeholder="Contoh: Fiberhome, Huawei, ZTE"
+                                required disabled>
+                            <small class="text-muted">Ketik nama merk barang</small>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Type <span class="text-danger">*</span></label>
-                            <select id="type" class="form-select" required disabled>
-                                <option value="">Pilih Type</option>
-                            </select>
+                            <input type="text" id="type" class="form-control"
+                                placeholder="Contoh: HG6145D2, F609"
+                                required disabled>
+                            <small class="text-muted">Ketik type/model barang</small>
                         </div>
 
                         <!-- Scan Fields -->
@@ -69,21 +71,21 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Scan Serial Number <span class="text-danger">*</span></label>
-                                <input type="text" id="serialNumber" class="form-control form-control-lg" 
-                                       placeholder="Scan atau ketik Serial Number" autocomplete="off">
+                                <input type="text" id="serialNumber" class="form-control form-control-lg"
+                                    placeholder="Scan atau ketik Serial Number" autocomplete="off">
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label">Scan MAC Address <span class="text-danger">*</span></label>
-                                <input type="text" id="macAddress" class="form-control form-control-lg" 
-                                       placeholder="Scan atau ketik MAC Address" autocomplete="off">
+                                <input type="text" id="macAddress" class="form-control form-control-lg"
+                                    placeholder="Scan atau ketik MAC Address" autocomplete="off">
                             </div>
 
                             <!-- STB ID (hanya untuk STB) -->
                             <div class="mb-3" id="stbIdGroup" style="display: none;">
                                 <label class="form-label">Scan STB ID <span class="text-danger">*</span></label>
-                                <input type="text" id="stbId" class="form-control form-control-lg" 
-                                       placeholder="Scan atau ketik STB ID" autocomplete="off">
+                                <input type="text" id="stbId" class="form-control form-control-lg"
+                                    placeholder="Scan atau ketik STB ID" autocomplete="off">
                             </div>
 
                             <div class="mb-3">
@@ -133,8 +135,8 @@
                                     <td>{{ $scan->type }}</td>
                                     <td>{{ $scan->scanner->name }}</td>
                                     <td>
-                                        <button class="btn btn-sm btn-danger btn-delete" 
-                                                data-id="{{ $scan->id }}">
+                                        <button class="btn btn-sm btn-danger btn-delete"
+                                            data-id="{{ $scan->id }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </td>
@@ -163,7 +165,6 @@ $(document).ready(function() {
     let currentJenis = '';
     let currentMerk = '';
     let currentType = '';
-    let merkId = null;
     
     // Update scan time setiap detik
     function updateScanTime() {
@@ -173,65 +174,66 @@ $(document).ready(function() {
     setInterval(updateScanTime, 1000);
     updateScanTime();
 
-    // Jenis change - load merk
+    // ⭐ JENIS CHANGE - Enable Merk & Type Input
     $('#jenis').on('change', function() {
         const jenis = $(this).val();
         currentJenis = jenis;
         
-        $('#merk').prop('disabled', !jenis).html('<option value="">Pilih Merk</option>');
-        $('#type').prop('disabled', true).html('<option value="">Pilih Type</option>');
-        $('#scanFields').hide();
-        
         if (jenis) {
-            $.get(`/igi/api/merk/${jenis}`, function(data) {
-                data.forEach(item => {
-                    $('#merk').append(`<option value="${item.id}">${item.merk}</option>`);
-                });
-            });
-        }
-    });
-
-    // Merk change - load type
-    $('#merk').on('change', function() {
-        merkId = $(this).val();
-        currentMerk = $(this).find('option:selected').text();
-        
-        $('#type').prop('disabled', !merkId).html('<option value="">Pilih Type</option>');
-        $('#scanFields').hide();
-        
-        if (merkId) {
-            $.get(`/igi/api/type/${merkId}`, function(data) {
-                data.forEach(item => {
-                    $('#type').append(`<option value="${item.type}">${item.type}</option>`);
-                });
-            });
-        }
-    });
-
-    // Type change - show scan fields & auto-focus
-    $('#type').on('change', function() {
-        currentType = $(this).val();
-        
-        if (currentType) {
-            $('#scanFields').fadeIn();
-            
-            // Show/hide STB ID field
-            if (currentJenis === 'STB') {
-                $('#stbIdGroup').show();
-                $('#stbId').prop('required', true);
-            } else {
-                $('#stbIdGroup').hide();
-                $('#stbId').prop('required', false).val('');
-            }
-            
-            // AUTO FOCUS ke Serial Number
-            setTimeout(() => $('#serialNumber').focus(), 100);
+            // Enable input Merk & Type
+            $('#merk').prop('disabled', false).val('').focus();
+            $('#type').prop('disabled', false).val('');
+            $('#scanFields').hide();
         } else {
+            // Disable jika jenis kosong
+            $('#merk').prop('disabled', true).val('');
+            $('#type').prop('disabled', true).val('');
             $('#scanFields').hide();
         }
     });
 
-    // Auto-focus logic: Serial → MAC → STB (if STB) → Loop
+    // ⭐ MERK: Hanya update saat Enter ditekan
+    $('#merk').on('keypress', function(e) {
+        if (e.which === 13) { // Enter
+            e.preventDefault();
+            currentMerk = $(this).val().trim();
+            
+            if (currentMerk) {
+                $('#type').prop('disabled', false).focus();
+            } else {
+                alert('Merk tidak boleh kosong!');
+            }
+        }
+    });
+
+    // ⭐ TYPE: Update dan show scan fields saat Enter ditekan
+    $('#type').on('keypress', function(e) {
+        if (e.which === 13) { // Enter
+            e.preventDefault();
+            currentType = $(this).val().trim();
+            
+            if (currentType && currentMerk && currentJenis) {
+                // Show scan fields
+                $('#scanFields').fadeIn();
+                
+                // Show/hide STB ID field
+                if (currentJenis === 'STB') {
+                    $('#stbIdGroup').show();
+                    $('#stbId').prop('required', true);
+                } else {
+                    $('#stbIdGroup').hide();
+                    $('#stbId').prop('required', false).val('');
+                }
+                
+                // AUTO FOCUS ke Serial Number
+                setTimeout(() => $('#serialNumber').focus(), 100);
+            } else {
+                alert('Pastikan Merk dan Type sudah diisi!');
+            }
+        }
+    });
+
+    // Auto-focus logic: Serial → MAC → STB (if STB) → Submit
     $('#serialNumber').on('keypress', function(e) {
         if (e.which === 13) { // Enter
             e.preventDefault();
@@ -323,11 +325,17 @@ $(document).ready(function() {
                     
                     // Update progress di header
                     $('.badge.bg-warning').text(`${response.total_scan} / ${response.jumlah}`);
+                    
+                    // Play sound if function exists
+                    if (typeof playScanSuccessSound === 'function') {
+                        playScanSuccessSound();
+                    }
                 }
-                playScanSuccessSound();
             },
             error: function(xhr) {
-                playScanErrorSound();
+                if (typeof playScanErrorSound === 'function') {
+                    playScanErrorSound();
+                }
                 alert(xhr.responseJSON?.message || 'Error saat menyimpan!');
                 $('#serialNumber').focus();
             }

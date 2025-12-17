@@ -47,13 +47,13 @@
                         <div class="mb-3">
                             <label class="form-label">Role <span class="text-danger">*</span></label>
                             <select name="role" class="form-select @error('role') is-invalid @enderror" required>
-                                <option value="user" {{ old('role', $user->role ?? 'user') === 'user' ? 'selected' : '' }}>
+                                <option value="user" {{ old('role') === 'user' ? 'selected' : '' }}>
                                     User (Full Access kecuali User Management)
                                 </option>
-                                <option value="admin" {{ old('role', $user->role ?? '') === 'admin' ? 'selected' : '' }}>
+                                <option value="admin" {{ old('role') === 'admin' ? 'selected' : '' }}>
                                     Admin (Full Access + Create User)
                                 </option>
-                                <option value="tamu" {{ old('role', $user->role ?? '') === 'tamu' ? 'selected' : '' }}>
+                                <option value="tamu" {{ old('role') === 'tamu' ? 'selected' : '' }}>
                                     Tamu (Dashboard & Download Only)
                                 </option>
                             </select>

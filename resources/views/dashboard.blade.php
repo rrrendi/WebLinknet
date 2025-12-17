@@ -258,44 +258,5 @@
             </div>
         @endforeach
     </div>
-
-    <!-- Quick Actions -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-3 col-6 mb-3">
-                            <a href="{{ route('igi.create') }}" class="btn btn-primary w-100 py-3">
-                                <i class="bi bi-plus-circle d-block fs-3 mb-2"></i>
-                                Tambah BAPB
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-6 mb-3">
-                            <a href="{{ route('uji-fungsi.index') }}" class="btn btn-success w-100 py-3">
-                                <i class="bi bi-check-circle d-block fs-3 mb-2"></i>
-                                Uji Fungsi
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-6 mb-3">
-                            <a href="{{ route('repair.index') }}" class="btn btn-warning w-100 py-3">
-                                <i class="bi bi-tools d-block fs-3 mb-2"></i>
-                                Repair
-                            </a>
-                        </div>
-                        <div class="col-md-3 col-6 mb-3">
-                            <a href="{{ route('download.index') }}" class="btn btn-info w-100 py-3">
-                                <i class="bi bi-download d-block fs-3 mb-2"></i>
-                                Download Data
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 @endsection

@@ -77,8 +77,8 @@ Route::middleware(['auth', 'active', 'not.tamu'])->group(function () {
         Route::delete('/detail/{id}', [IgiController::class, 'deleteDetail'])->name('delete-detail');
         
         // API untuk dropdown
-        Route::get('/api/merk/{jenis}', [IgiController::class, 'getMerkByJenis'])->name('api.merk');
-        Route::get('/api/type/{merkId}', [IgiController::class, 'getTypeByMerk'])->name('api.type');
+        // Route::get('/api/merk/{jenis}', [IgiController::class, 'getMerkByJenis'])->name('api.merk');
+        // Route::get('/api/type/{merkId}', [IgiController::class, 'getTypeByMerk'])->name('api.type');
     });
 
     // ==========================================

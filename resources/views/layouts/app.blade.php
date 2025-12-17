@@ -425,6 +425,10 @@
                 <i class="bi bi-inbox"></i> IGI
             </a>
 
+            <a class="nav-link {{ request()->is('koreksi-barcode*') ? 'active' : '' }}" href="{{ route('koreksi-barcode.index') }}">
+                <i class="bi bi-pencil-square"></i> Koreksi Barcode
+            </a>
+
             <a class="nav-link {{ request()->is('uji-fungsi*') ? 'active' : '' }}" href="{{ route('uji-fungsi.index') }}">
                 <i class="bi bi-check-circle"></i> Uji Fungsi
             </a>
@@ -443,10 +447,6 @@
 
             <a class="nav-link {{ request()->is('packing*') ? 'active' : '' }}" href="{{ route('packing.index') }}">
                 <i class="bi bi-box"></i> Packing
-            </a>
-
-            <a class="nav-link {{ request()->is('koreksi-barcode*') ? 'active' : '' }}" href="{{ route('koreksi-barcode.index') }}">
-                <i class="bi bi-pencil-square"></i> Koreksi Barcode
             </a>
 
             @endif

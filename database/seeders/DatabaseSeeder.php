@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('📋 Login Credentials:');
         $this->command->info('   👤 Admin: admin@linknet.com / admin123');
         $this->command->info('   👤 User: user@linknet.com / user123');
+        $this->command->info('   👤 Tamu: tamu@linknet.com / tamu123');
         $this->command->newLine();
     }
 }

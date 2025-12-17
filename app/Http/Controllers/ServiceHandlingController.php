@@ -43,6 +43,15 @@ class ServiceHandlingController extends Controller
         if (!$detail) {
             return response()->json(['success' => false, 'message' => 'Serial Number tidak ditemukan!'], 404);
         }
+        
+        // Validasi 1: Cek status tidak boleh dari PACKING atau setelahnya
+        $forbiddenStatuses = ['PACKING', 'FINISH'];
+        if (in_array($detail->status_proses, $forbiddenStatuses)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak bisa masuk Service Handling! Barang sudah dalam proses ' . $detail->status_proses
+            ], 403);
+        }
 
         // Validasi: belum pernah di Service Handling
         if ($detail->ServiceHandling()->exists()) {

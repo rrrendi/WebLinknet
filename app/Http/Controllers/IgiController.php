@@ -89,27 +89,27 @@ class IgiController extends Controller
         return view('igi.scan-detail', compact('bapb', 'recentScans'));
     }
 
-    // API: Get Merk by Jenis
-    public function getMerkByJenis($jenis)
-    {
-        $merkList = MasterMerk::where('is_active', true)
-                              ->where('jenis', $jenis)
-                              ->orderBy('merk')
-                              ->get(['id', 'merk']);
+    // // API: Get Merk by Jenis
+    // public function getMerkByJenis($jenis)
+    // {
+    //     $merkList = MasterMerk::where('is_active', true)
+    //                           ->where('jenis', $jenis)
+    //                           ->orderBy('merk')
+    //                           ->get(['id', 'merk']);
 
-        return response()->json($merkList);
-    }
+    //     return response()->json($merkList);
+    // }
 
-    // API: Get Type by Merk
-    public function getTypeByMerk($merkId)
-    {
-        $typeList = MasterType::where('is_active', true)
-                              ->where('merk_id', $merkId)
-                              ->orderBy('type')
-                              ->get(['id', 'type']);
+    // // API: Get Type by Merk
+    // public function getTypeByMerk($merkId)
+    // {
+    //     $typeList = MasterType::where('is_active', true)
+    //                           ->where('merk_id', $merkId)
+    //                           ->orderBy('type')
+    //                           ->get(['id', 'type']);
 
-        return response()->json($typeList);
-    }
+    //     return response()->json($typeList);
+    // }
 
     // STEP 5: Store Detail Barang (Scan)
     public function storeDetail(Request $request)
