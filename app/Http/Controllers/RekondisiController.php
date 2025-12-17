@@ -119,7 +119,7 @@ class RekondisiController extends Controller
 
             // Check: harus proses terakhir
             if ($rekondisi->igiDetail->status_proses !== 'REKONDISI') {
-                return response()->json(['success' => false, 'message' => 'Tidak bisa hapus! Barang sudah masuk proses berikutnya.'], 403);
+                return response()->json(['success' => false, 'message' => 'Tidak bisa hapus! Barang sudah masuk proses berikutnya: ' . $rekondisi->igiDetail->status_proses], 403);
             }
 
             $rekondisi->delete();

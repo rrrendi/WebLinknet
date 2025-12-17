@@ -403,6 +403,66 @@
             border-color: var(--border-color);
             color: var(--text-muted);
         }
+
+        /* ====================================================== */
+        /* ACTIVITY HISTORY - DARK MODE SUPPORT */
+        /* ====================================================== */
+
+        /* List Group Items */
+        .list-group-item.activity-item {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .list-group-item.activity-item:hover {
+            background-color: var(--table-hover);
+        }
+
+        /* Activity Icons */
+        .activity-icon {
+            color: var(--info-color);
+        }
+
+        [data-theme="dark"] .activity-icon {
+            color: #5dade2;
+        }
+
+        /* List Group in Dark Mode */
+        [data-theme="dark"] .list-group-item {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .list-group-item-action:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        [data-theme="dark"] .list-group-item-action:focus {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Badge colors remain vibrant in dark mode */
+        [data-theme="dark"] .badge.bg-success {
+            background-color: #27ae60 !important;
+        }
+
+        [data-theme="dark"] .badge.bg-danger {
+            background-color: #e74c3c !important;
+        }
+
+        [data-theme="dark"] .badge.bg-primary {
+            background-color: #3498db !important;
+        }
+
+        /* Alert in Dark Mode */
+        [data-theme="dark"] .alert-warning {
+            background-color: rgba(243, 156, 18, 0.2);
+            border-color: rgba(243, 156, 18, 0.3);
+            color: #f39c12;
+        }
     </style>
     @stack('styles')
 </head>

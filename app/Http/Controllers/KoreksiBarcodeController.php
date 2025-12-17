@@ -60,12 +60,35 @@ class KoreksiBarcodeController extends Controller
             ->with('user')
             ->orderBy('tanggal', 'desc')
             ->get()
-            ->map(function($activity) use ($user) {
+            ->map(function ($activity) use ($user) {
+
+                $resultLabel = $activity->result;
+                if ($activity->result === 'N/A') {
+                    // Untuk aktivitas yang tidak punya result, beri label yang lebih deskriptif
+                    switch ($activity->aktivitas) {
+                        case 'IGI':
+                            $resultLabel = 'MASUK';
+                            break;
+                        case 'REKONDISI':
+                            $resultLabel = 'SELESAI';
+                            break;
+                        case 'PACKING':
+                            $resultLabel = 'DIKEMAS';
+                            break;
+                        case 'KOREKSI':
+                            $resultLabel = 'DIKOREKSI';
+                            break;
+                        default:
+                            $resultLabel = 'RUSAK'; // Checkmark saja
+                    }
+                }
+
                 return [
                     'id' => $activity->id,
                     'aktivitas' => $activity->aktivitas,
                     'tanggal' => $activity->tanggal->format('d-m-Y H:i:s'),
                     'result' => $activity->result,
+                    'result_label' => $resultLabel,
                     'user_name' => $activity->user->name,
                     'user_id' => $activity->user_id,
                     'can_delete' => $user?->canDeleteActivity($activity->user_id) ?? false,
@@ -158,6 +181,7 @@ class KoreksiBarcodeController extends Controller
     }
 
     // Delete Activity (hanya yang membuat)
+    // Delete Activity (hanya yang membuat)
     public function deleteActivity(Request $request, $id)
     {
         DB::beginTransaction();
@@ -169,7 +193,9 @@ class KoreksiBarcodeController extends Controller
             if (!$user || !$user->canDeleteActivity($activity->user_id)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Anda tidak memiliki izin untuk menghapus aktivitas ini!'
+                    'message' => 'Anda tidak memiliki izin untuk menghapus aktivitas ini!',
+                    'error_type' => 'PERMISSION_DENIED',
+                    'detail' => 'Hanya pembuat aktivitas atau Admin yang dapat menghapus aktivitas.'
                 ], 403);
             }
 
@@ -178,38 +204,81 @@ class KoreksiBarcodeController extends Controller
 
             // Validasi: hanya bisa hapus jika ini aktivitas terakhir
             if ($detail->status_proses !== $aktivitasType) {
+                // Cari tahu aktivitas apa yang ada setelahnya
+                $nextActivities = $detail->activityLogs()
+                    ->where('tanggal', '>', $activity->tanggal)
+                    ->pluck('aktivitas')
+                    ->unique()
+                    ->implode(', ');
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Tidak bisa hapus! Ini bukan aktivitas terakhir. Status barang saat ini: ' . $detail->status_proses
+                    'message' => 'Tidak bisa menghapus aktivitas ini!',
+                    'error_type' => 'NOT_LAST_ACTIVITY',
+                    'detail' => sprintf(
+                        'Aktivitas "%s" bukan aktivitas terakhir. Status barang saat ini: "%s". Aktivitas setelahnya: %s',
+                        $aktivitasType,
+                        $detail->status_proses,
+                        $nextActivities ?: 'tidak ada'
+                    )
+                ], 403);
+            }
+
+            // Validasi khusus: tidak bisa hapus IGI
+            if ($aktivitasType === 'IGI') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak dapat menghapus aktivitas IGI!',
+                    'error_type' => 'CANNOT_DELETE_IGI',
+                    'detail' => 'Aktivitas IGI adalah aktivitas awal yang tidak dapat dihapus. Hubungi Admin jika ada masalah.'
                 ], 403);
             }
 
             // Hapus record terkait berdasarkan aktivitas
             switch ($aktivitasType) {
                 case 'UJI_FUNGSI':
-                    $detail->ujiFungsi()->where('user_id', $activity->user_id)->delete();
-                    $detail->updateStatusProses('IGI');
+                    $deleted = $detail->ujiFungsi()->where('user_id', $activity->user_id)->delete();
+                    if ($deleted > 0) {
+                        $detail->updateStatusProses('IGI');
+                    }
                     break;
                 case 'REPAIR':
-                    $detail->repair()->where('user_id', $activity->user_id)->delete();
-                    $detail->updateStatusProses('UJI_FUNGSI');
+                    $deleted = $detail->repair()->where('user_id', $activity->user_id)->delete();
+                    if ($deleted > 0) {
+                        $detail->updateStatusProses('UJI_FUNGSI');
+                    }
                     break;
                 case 'REKONDISI':
-                    $detail->rekondisi()->where('user_id', $activity->user_id)->delete();
-                    // Kembali ke status sebelumnya
-                    $previousStatus = $detail->getPreviousStatus();
-                    $detail->updateStatusProses($previousStatus);
+                    $deleted = $detail->rekondisi()->where('user_id', $activity->user_id)->delete();
+                    if ($deleted > 0) {
+                        $previousStatus = $detail->getPreviousStatus();
+                        $detail->updateStatusProses($previousStatus);
+                    }
                     break;
                 case 'SERVICE_HANDLING':
-                    $detail->serviceHandling()->where('user_id', $activity->user_id)->delete();
-                    $previousStatus = $detail->getPreviousStatus();
-                    $detail->updateStatusProses($previousStatus);
+                    $deleted = $detail->serviceHandling()->where('user_id', $activity->user_id)->delete();
+                    if ($deleted > 0) {
+                        $previousStatus = $detail->getPreviousStatus();
+                        $detail->updateStatusProses($previousStatus);
+                    }
                     break;
                 case 'PACKING':
-                    $detail->packing()->where('user_id', $activity->user_id)->delete();
-                    $previousStatus = $detail->getPreviousStatus();
-                    $detail->updateStatusProses($previousStatus);
+                    $deleted = $detail->packing()->where('user_id', $activity->user_id)->delete();
+                    if ($deleted > 0) {
+                        $previousStatus = $detail->getPreviousStatus();
+                        $detail->updateStatusProses($previousStatus);
+                    }
                     break;
+                case 'KOREKSI':
+                    // Koreksi tidak mengubah status, langsung hapus saja
+                    break;
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Jenis aktivitas tidak dikenali!',
+                        'error_type' => 'UNKNOWN_ACTIVITY',
+                        'detail' => sprintf('Aktivitas "%s" tidak dapat dihapus melalui menu ini.', $aktivitasType)
+                    ], 400);
             }
 
             // Hapus activity log
@@ -219,13 +288,24 @@ class KoreksiBarcodeController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Aktivitas berhasil dihapus!'
+                'message' => sprintf('Aktivitas "%s" berhasil dihapus!', $aktivitasType),
+                'new_status' => $detail->fresh()->status_proses
             ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollback();
+            return response()->json([
+                'success' => false,
+                'message' => 'Aktivitas tidak ditemukan!',
+                'error_type' => 'NOT_FOUND',
+                'detail' => 'Aktivitas mungkin sudah dihapus sebelumnya.'
+            ], 404);
         } catch (\Exception $e) {
             DB::rollback();
             return response()->json([
                 'success' => false,
-                'message' => 'Error: ' . $e->getMessage()
+                'message' => 'Terjadi kesalahan sistem!',
+                'error_type' => 'SERVER_ERROR',
+                'detail' => 'Error: ' . $e->getMessage()
             ], 500);
         }
     }
