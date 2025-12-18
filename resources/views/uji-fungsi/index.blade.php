@@ -181,7 +181,6 @@ $(document).ready(function() {
             success: function(response) {
                 igiDetailId = response.data.id;
                 submitUjiFungsi();
-                playScanSuccessSound();
             },
             error: function(xhr) {
                 playScanErrorSound(); // Play error sound

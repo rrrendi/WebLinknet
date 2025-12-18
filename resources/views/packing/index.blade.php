@@ -192,7 +192,6 @@ $(document).ready(function() {
                         igiDetailId = response.data.id;
                         submitPacking();
                     }
-                    playScanSuccessSound();
                 },
                 error: function(xhr) {
                     playScanErrorSound(); // Play error sound
