@@ -35,7 +35,7 @@
                             <td>{{ $user->name }}</td>
                             <td>{{ $user->email }}</td>
                             <td>
-                                <span class="badge bg-{{ $user->isAdmin() ? 'danger' : 'primary' }}">
+                                <span class="badge bg-{{ $user->isAdmin() ? 'danger' : ($user->isTamu() ? 'secondary' : 'primary') }}">
                                     {{ strtoupper($user->role) }}
                                 </span>
                             </td>
