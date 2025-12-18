@@ -161,142 +161,145 @@
 
 @push('scripts')
 <script>
-$(document).ready(function() {
-    let currentJenis = '';
-    let currentMerk = '';
-    let currentType = '';
-    
-    // Update scan time setiap detik
-    function updateScanTime() {
-        const now = new Date();
-        $('#scanTime').val(now.toLocaleString('id-ID'));
-    }
-    setInterval(updateScanTime, 1000);
-    updateScanTime();
+    $(document).ready(function() {
+        let currentJenis = '';
+        let currentMerk = '';
+        let currentType = '';
 
-    // ⭐ JENIS CHANGE - Enable Merk & Type Input
-    $('#jenis').on('change', function() {
-        const jenis = $(this).val();
-        currentJenis = jenis;
-        
-        if (jenis) {
-            // Enable input Merk & Type
-            $('#merk').prop('disabled', false).val('').focus();
-            $('#type').prop('disabled', false).val('');
-            $('#scanFields').hide();
-        } else {
-            // Disable jika jenis kosong
-            $('#merk').prop('disabled', true).val('');
-            $('#type').prop('disabled', true).val('');
-            $('#scanFields').hide();
+        // Update scan time setiap detik
+        function updateScanTime() {
+            const now = new Date();
+            $('#scanTime').val(now.toLocaleString('id-ID'));
         }
-    });
+        setInterval(updateScanTime, 1000);
+        updateScanTime();
 
-    // ⭐ MERK: Hanya update saat Enter ditekan
-    $('#merk').on('keypress', function(e) {
-        if (e.which === 13) { // Enter
-            e.preventDefault();
-            currentMerk = $(this).val().trim();
-            
-            if (currentMerk) {
-                $('#type').prop('disabled', false).focus();
+        // ⭐ JENIS CHANGE - Enable Merk & Type Input
+        $('#jenis').on('change', function() {
+            const jenis = $(this).val();
+            currentJenis = jenis;
+
+            if (jenis) {
+                // Enable input Merk & Type
+                $('#merk').prop('disabled', false).val('').focus();
+                $('#type').prop('disabled', false).val('');
+                $('#scanFields').hide();
             } else {
-                alert('Merk tidak boleh kosong!');
+                // Disable jika jenis kosong
+                $('#merk').prop('disabled', true).val('');
+                $('#type').prop('disabled', true).val('');
+                $('#scanFields').hide();
             }
-        }
-    });
+        });
 
-    // ⭐ TYPE: Update dan show scan fields saat Enter ditekan
-    $('#type').on('keypress', function(e) {
-        if (e.which === 13) { // Enter
-            e.preventDefault();
-            currentType = $(this).val().trim();
-            
-            if (currentType && currentMerk && currentJenis) {
-                // Show scan fields
-                $('#scanFields').fadeIn();
-                
-                // Show/hide STB ID field
-                if (currentJenis === 'STB') {
-                    $('#stbIdGroup').show();
-                    $('#stbId').prop('required', true);
+        // ⭐ MERK: Bisa dihapus atau disederhanakan menjadi:
+        $('#merk').on('keypress', function(e) {
+            if (e.which === 13) { // Enter
+                e.preventDefault();
+                if ($(this).val().trim()) {
+                    $('#type').focus(); // Langsung pindah ke Type
                 } else {
-                    $('#stbIdGroup').hide();
-                    $('#stbId').prop('required', false).val('');
+                    alert('Merk tidak boleh kosong!');
                 }
-                
-                // AUTO FOCUS ke Serial Number
-                setTimeout(() => $('#serialNumber').focus(), 100);
-            } else {
-                alert('Pastikan Merk dan Type sudah diisi!');
             }
-        }
-    });
+        });
 
-    // Auto-focus logic: Serial → MAC → STB (if STB) → Submit
-    $('#serialNumber').on('keypress', function(e) {
-        if (e.which === 13) { // Enter
-            e.preventDefault();
-            if ($(this).val().trim()) {
-                $('#macAddress').focus();
-            }
-        }
-    });
+        // ⭐ TYPE: Update dan show scan fields saat Enter ditekan
+        $('#type').on('keypress', function(e) {
+            if (e.which === 13) { // Enter
+                e.preventDefault();
 
-    $('#macAddress').on('keypress', function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            if ($(this).val().trim()) {
-                if (currentJenis === 'STB') {
-                    $('#stbId').focus();
+                // ✅ UBAH: Ambil nilai langsung dari input, bukan dari variabel
+                const merkValue = $('#merk').val().trim();
+                const typeValue = $(this).val().trim();
+                currentType = typeValue; // Update variabel
+                currentMerk = merkValue; // Update variabel
+
+                if (currentType && currentMerk && currentJenis) {
+                    // Show scan fields
+                    $('#scanFields').fadeIn();
+
+                    // Show/hide STB ID field
+                    if (currentJenis === 'STB') {
+                        $('#stbIdGroup').show();
+                        $('#stbId').prop('required', true);
+                    } else {
+                        $('#stbIdGroup').hide();
+                        $('#stbId').prop('required', false).val('');
+                    }
+
+                    // AUTO FOCUS ke Serial Number
+                    setTimeout(() => $('#serialNumber').focus(), 100);
                 } else {
+                    alert('Pastikan Merk dan Type sudah diisi!');
+                }
+            }
+        });
+
+        // Auto-focus logic: Serial → MAC → STB (if STB) → Submit
+        $('#serialNumber').on('keypress', function(e) {
+            if (e.which === 13) { // Enter
+                e.preventDefault();
+                if ($(this).val().trim()) {
+                    $('#macAddress').focus();
+                }
+            }
+        });
+
+        $('#macAddress').on('keypress', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                if ($(this).val().trim()) {
+                    if (currentJenis === 'STB') {
+                        $('#stbId').focus();
+                    } else {
+                        submitScan();
+                    }
+                }
+            }
+        });
+
+        $('#stbId').on('keypress', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                if ($(this).val().trim()) {
                     submitScan();
                 }
             }
-        }
-    });
+        });
 
-    $('#stbId').on('keypress', function(e) {
-        if (e.which === 13) {
-            e.preventDefault();
-            if ($(this).val().trim()) {
-                submitScan();
+        // Submit Scan
+        function submitScan() {
+            const serialNumber = $('#serialNumber').val().trim();
+            const macAddress = $('#macAddress').val().trim();
+            const stbId = $('#stbId').val().trim();
+
+            if (!serialNumber || !macAddress) {
+                alert('Serial Number dan MAC Address wajib diisi!');
+                return;
             }
-        }
-    });
 
-    // Submit Scan
-    function submitScan() {
-        const serialNumber = $('#serialNumber').val().trim();
-        const macAddress = $('#macAddress').val().trim();
-        const stbId = $('#stbId').val().trim();
+            if (currentJenis === 'STB' && !stbId) {
+                alert('STB ID wajib diisi untuk jenis STB!');
+                return;
+            }
 
-        if (!serialNumber || !macAddress) {
-            alert('Serial Number dan MAC Address wajib diisi!');
-            return;
-        }
-
-        if (currentJenis === 'STB' && !stbId) {
-            alert('STB ID wajib diisi untuk jenis STB!');
-            return;
-        }
-
-        $.ajax({
-            url: '{{ route("igi.store-detail") }}',
-            method: 'POST',
-            data: {
-                bapb_id: $('#bapbId').val(),
-                jenis: currentJenis,
-                merk: currentMerk,
-                type: currentType,
-                serial_number: serialNumber,
-                mac_address: macAddress,
-                stb_id: stbId || null
-            },
-            success: function(response) {
-                if (response.success) {
-                    const data = response.data;
-                    const row = `
+            $.ajax({
+                url: '{{ route("igi.store-detail") }}',
+                method: 'POST',
+                data: {
+                    bapb_id: $('#bapbId').val(),
+                    jenis: currentJenis,
+                    merk: currentMerk,
+                    type: currentType,
+                    serial_number: serialNumber,
+                    mac_address: macAddress,
+                    stb_id: stbId || null
+                },
+                success: function(response) {
+                    if (response.success) {
+                        const data = response.data;
+                        const row = `
                         <tr id="scan-row-${data.id}">
                             <td>${new Date(data.scan_time).toLocaleString('id-ID')}</td>
                             <td><code>${data.serial_number}</code></td>
@@ -313,56 +316,56 @@ $(document).ready(function() {
                             </td>
                         </tr>
                     `;
-                    
-                    $('#noData').remove();
-                    $('#scanTableBody').prepend(row);
-                    
-                    // Reset scan fields & refocus
-                    $('#serialNumber').val('');
-                    $('#macAddress').val('');
-                    $('#stbId').val('');
+
+                        $('#noData').remove();
+                        $('#scanTableBody').prepend(row);
+
+                        // Reset scan fields & refocus
+                        $('#serialNumber').val('');
+                        $('#macAddress').val('');
+                        $('#stbId').val('');
+                        $('#serialNumber').focus();
+
+                        // Update progress di header
+                        $('.badge.bg-warning').text(`${response.total_scan} / ${response.jumlah}`);
+
+                        // Play sound if function exists
+                        if (typeof playScanSuccessSound === 'function') {
+                            playScanSuccessSound();
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    if (typeof playScanErrorSound === 'function') {
+                        playScanErrorSound();
+                    }
+                    alert(xhr.responseJSON?.message || 'Error saat menyimpan!');
                     $('#serialNumber').focus();
-                    
-                    // Update progress di header
-                    $('.badge.bg-warning').text(`${response.total_scan} / ${response.jumlah}`);
-                    
-                    // Play sound if function exists
-                    if (typeof playScanSuccessSound === 'function') {
-                        playScanSuccessSound();
+                }
+            });
+        }
+
+        // Delete
+        $(document).on('click', '.btn-delete', function() {
+            const id = $(this).data('id');
+            if (!confirm('Yakin ingin menghapus scan ini?')) return;
+
+            $.ajax({
+                url: `/igi/detail/${id}`,
+                method: 'DELETE',
+                success: function(response) {
+                    if (response.success) {
+                        $(`#scan-row-${id}`).fadeOut(300, function() {
+                            $(this).remove();
+                            if ($('#scanTableBody tr').length === 0) {
+                                $('#scanTableBody').html('<tr id="noData"><td colspan="9" class="text-center">Belum ada data scan</td></tr>');
+                            }
+                        });
                     }
                 }
-            },
-            error: function(xhr) {
-                if (typeof playScanErrorSound === 'function') {
-                    playScanErrorSound();
-                }
-                alert(xhr.responseJSON?.message || 'Error saat menyimpan!');
-                $('#serialNumber').focus();
-            }
-        });
-    }
-
-    // Delete
-    $(document).on('click', '.btn-delete', function() {
-        const id = $(this).data('id');
-        if (!confirm('Yakin ingin menghapus scan ini?')) return;
-        
-        $.ajax({
-            url: `/igi/detail/${id}`,
-            method: 'DELETE',
-            success: function(response) {
-                if (response.success) {
-                    $(`#scan-row-${id}`).fadeOut(300, function() {
-                        $(this).remove();
-                        if ($('#scanTableBody tr').length === 0) {
-                            $('#scanTableBody').html('<tr id="noData"><td colspan="9" class="text-center">Belum ada data scan</td></tr>');
-                        }
-                    });
-                }
-            }
+            });
         });
     });
-});
 </script>
 @endpush
 @endsection
