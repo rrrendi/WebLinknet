@@ -192,6 +192,7 @@ $(document).ready(function() {
                         igiDetailId = response.data.id;
                         submitRekondisi();
                     }
+                    playScanSuccessSound();
                 },
                 error: function(xhr) {
                     playScanErrorSound(); // Play error sound
@@ -271,8 +272,10 @@ $(document).ready(function() {
                     alert(response.message);
                     $('#serialNumberRekondisi').focus();
                 }
+                playScanSuccessSound();
             },
             error: function(xhr) {
+                playScanErrorSound();
                 alert(xhr.responseJSON?.message || 'Error menghapus data!');
             }
         });

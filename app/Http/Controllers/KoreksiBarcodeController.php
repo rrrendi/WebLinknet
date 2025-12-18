@@ -64,7 +64,6 @@ class KoreksiBarcodeController extends Controller
 
                 $resultLabel = $activity->result;
                 if ($activity->result === 'N/A') {
-                    // Untuk aktivitas yang tidak punya result, beri label yang lebih deskriptif
                     switch ($activity->aktivitas) {
                         case 'IGI':
                             $resultLabel = 'MASUK';
@@ -79,8 +78,14 @@ class KoreksiBarcodeController extends Controller
                             $resultLabel = 'DIKOREKSI';
                             break;
                         default:
-                            $resultLabel = 'RUSAK'; // Checkmark saja
+                            $resultLabel = 'RUSAK';
                     }
+                }
+
+                // Format perubahan data untuk KOREKSI
+                $changes = null;
+                if ($activity->aktivitas === 'KOREKSI' && $activity->data_lama && $activity->data_baru) {
+                    $changes = $this->formatChanges($activity->data_lama, $activity->data_baru);
                 }
 
                 return [
@@ -92,7 +97,8 @@ class KoreksiBarcodeController extends Controller
                     'user_name' => $activity->user->name,
                     'user_id' => $activity->user_id,
                     'can_delete' => $user?->canDeleteActivity($activity->user_id) ?? false,
-                    'keterangan' => $activity->keterangan
+                    'keterangan' => $activity->keterangan,
+                    'changes' => $changes // Data perubahan untuk KOREKSI
                 ];
             });
 
@@ -100,6 +106,36 @@ class KoreksiBarcodeController extends Controller
             'success' => true,
             'data' => $activities
         ]);
+    }
+
+    // Helper function untuk format perubahan data
+    private function formatChanges($dataLama, $dataBaru)
+    {
+        $changes = [];
+        
+        $fields = [
+            'mac_address' => 'MAC Address',
+            'jenis' => 'Jenis',
+            'merk' => 'Merk',
+            'type' => 'Type',
+            'stb_id' => 'STB ID'
+        ];
+
+        foreach ($fields as $key => $label) {
+            $oldValue = $dataLama[$key] ?? '-';
+            $newValue = $dataBaru[$key] ?? '-';
+            
+            // Hanya tampilkan field yang berubah
+            if ($oldValue != $newValue) {
+                $changes[] = [
+                    'field' => $label,
+                    'old' => $oldValue ?: '-',
+                    'new' => $newValue ?: '-'
+                ];
+            }
+        }
+
+        return $changes;
     }
 
     // Update Data (Koreksi)
@@ -153,7 +189,7 @@ class KoreksiBarcodeController extends Controller
             // Update data
             $detail->update($dataBaru);
 
-            // Log koreksi
+            // Log koreksi dengan data lama dan baru
             ActivityLog::create([
                 'igi_detail_id' => $detail->id,
                 'aktivitas' => 'KOREKSI',
@@ -180,8 +216,7 @@ class KoreksiBarcodeController extends Controller
         }
     }
 
-    // Delete Activity (hanya yang membuat)
-    // Delete Activity (hanya yang membuat)
+    // Delete Activity
     public function deleteActivity(Request $request, $id)
     {
         DB::beginTransaction();
@@ -202,11 +237,38 @@ class KoreksiBarcodeController extends Controller
             $detail = $activity->igiDetail;
             $aktivitasType = $activity->aktivitas;
 
-            // Validasi: hanya bisa hapus jika ini aktivitas terakhir
-            if ($detail->status_proses !== $aktivitasType) {
-                // Cari tahu aktivitas apa yang ada setelahnya
+            // Validasi khusus: tidak bisa hapus IGI
+            if ($aktivitasType === 'IGI') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak dapat menghapus aktivitas IGI!',
+                    'error_type' => 'CANNOT_DELETE_IGI',
+                    'detail' => 'Aktivitas IGI adalah aktivitas awal yang tidak dapat dihapus. Hubungi Admin jika ada masalah.'
+                ], 403);
+            }
+
+            // Validasi khusus: tidak bisa hapus KOREKSI
+            if ($aktivitasType === 'KOREKSI') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak dapat menghapus aktivitas KOREKSI!',
+                    'error_type' => 'CANNOT_DELETE_KOREKSI',
+                    'detail' => 'Aktivitas KOREKSI adalah riwayat perubahan data yang tidak dapat dihapus untuk keperluan audit.'
+                ], 403);
+            }
+
+            // Validasi: hanya bisa hapus aktivitas terakhir (KECUALI KOREKSI)
+            // Cari aktivitas terakhir yang BUKAN KOREKSI
+            $lastNonKoreksiActivity = $detail->activityLogs()
+                ->where('aktivitas', '!=', 'KOREKSI')
+                ->orderBy('tanggal', 'desc')
+                ->first();
+
+            // Jika aktivitas yang akan dihapus bukan aktivitas terakhir (non-KOREKSI)
+            if ($lastNonKoreksiActivity && $lastNonKoreksiActivity->id !== $activity->id) {
                 $nextActivities = $detail->activityLogs()
                     ->where('tanggal', '>', $activity->tanggal)
+                    ->where('aktivitas', '!=', 'KOREKSI')
                     ->pluck('aktivitas')
                     ->unique()
                     ->implode(', ');
@@ -221,16 +283,6 @@ class KoreksiBarcodeController extends Controller
                         $detail->status_proses,
                         $nextActivities ?: 'tidak ada'
                     )
-                ], 403);
-            }
-
-            // Validasi khusus: tidak bisa hapus IGI
-            if ($aktivitasType === 'IGI') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tidak dapat menghapus aktivitas IGI!',
-                    'error_type' => 'CANNOT_DELETE_IGI',
-                    'detail' => 'Aktivitas IGI adalah aktivitas awal yang tidak dapat dihapus. Hubungi Admin jika ada masalah.'
                 ], 403);
             }
 
@@ -268,9 +320,6 @@ class KoreksiBarcodeController extends Controller
                         $previousStatus = $detail->getPreviousStatus();
                         $detail->updateStatusProses($previousStatus);
                     }
-                    break;
-                case 'KOREKSI':
-                    // Koreksi tidak mengubah status, langsung hapus saja
                     break;
                 default:
                     return response()->json([

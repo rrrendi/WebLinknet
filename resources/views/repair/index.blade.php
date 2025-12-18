@@ -211,6 +211,7 @@ $(document).ready(function() {
             success: function(response) {
                 igiDetailId = response.data.id;
                 submitRepair();
+                playScanSuccessSound();
             },
             error: function(xhr) {
                 playScanErrorSound(); // Play error sound
@@ -280,8 +281,10 @@ $(document).ready(function() {
                 $(`#repair-row-${id}`).fadeOut(300, function() { $(this).remove(); });
                 alert(response.message);
                 $('#serialNumberRepair').focus();
+                playScanSuccessSound();
             },
             error: function(xhr) {
+                playScanErrorSound();
                 alert(xhr.responseJSON?.message || 'Error menghapus data!');
             }
         });
