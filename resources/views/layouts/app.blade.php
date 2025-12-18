@@ -471,7 +471,7 @@
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="brand">
-            <i class="bi bi-box-seam"></i> Management Produksi Linknet Koperasi
+            Management Produksi Linknet Koperasi
         </div>
         <nav class="nav flex-column">
             <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
